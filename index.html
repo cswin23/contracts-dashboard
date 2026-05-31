@@ -3,979 +3,425 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Federal Contracts Dashboard</title>
+<title>Vantage Ops — Contract Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,600;1,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #faf7f2;
-    --panel: #ffffff;
-    --ink: #1a1a1a;
-    --ink-soft: #4a4a4a;
-    --ink-dim: #8a8580;
-    --rule: #e6e1d8;
-    --rule-strong: #2a2a2a;
-    --accent: #c8392a;
-    --accent-soft: #f4e4e0;
-    --green: #2d6a3e;
-    --amber: #b8741a;
-    --serif: 'Source Serif 4', Georgia, 'Times New Roman', serif;
-    --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  :root{
+    --ink:#13211b; --paper:#f4f1e8; --card:#fffdf7; --line:#d9d2c0;
+    --accent:#1d6a4f; --accent-d:#124433; --gold:#b8893b; --red:#9c3a2e;
+    --muted:#6b6557; --shadow:0 1px 0 #e7e0cf,0 8px 24px -16px rgba(19,33,27,.4);
   }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: var(--sans);
-    background: var(--bg);
-    color: var(--ink);
-    line-height: 1.5;
-    padding: 32px 24px 60px;
-    max-width: 1280px;
-    margin: 0 auto;
-    font-size: 14px;
-  }
-  /* ===== MASTHEAD ===== */
-  .masthead {
-    border-bottom: 3px solid var(--rule-strong);
-    padding-bottom: 16px;
-    margin-bottom: 24px;
-    display: grid;
-    grid-template-columns: 1fr auto;
-    align-items: end;
-    gap: 24px;
-  }
-  .masthead h1 {
-    font-family: var(--serif);
-    font-weight: 700;
-    font-size: 38px;
-    line-height: 1;
-    letter-spacing: -0.01em;
-  }
-  .masthead h1 em {
-    font-style: italic;
-    color: var(--accent);
-    font-weight: 700;
-  }
-  .masthead-meta {
-    text-align: right;
-    font-size: 11px;
-    line-height: 1.6;
-    color: var(--ink-soft);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-  }
-  .masthead-meta strong { color: var(--ink); font-weight: 600; }
-  .masthead-meta .accent { color: var(--accent); }
-  
-  /* ===== STATS ===== */
-  .stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    border-top: 1px solid var(--rule);
-    border-bottom: 1px solid var(--rule);
-    margin-bottom: 28px;
-  }
-  .stat {
-    padding: 14px 18px;
-    border-right: 1px solid var(--rule);
-  }
-  .stat:last-child { border-right: none; }
-  .stat-label {
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    color: var(--ink-dim);
-    margin-bottom: 4px;
-  }
-  .stat-value {
-    font-family: var(--serif);
-    font-weight: 600;
-    font-size: 28px;
-    line-height: 1;
-    color: var(--ink);
-  }
-  .stat-value.accent { color: var(--accent); }
-  .stat-sub {
-    font-size: 11px;
-    color: var(--ink-soft);
-    margin-top: 4px;
-  }
-  
-  /* ===== FILTERS ===== */
-  .controls {
-    background: var(--panel);
-    border: 1px solid var(--rule);
-    padding: 18px;
-    margin-bottom: 20px;
-  }
-  .filters {
-    display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr;
-    gap: 12px;
-    margin-bottom: 14px;
-  }
-  @media (max-width: 1100px) {
-    .filters { grid-template-columns: 1fr 1fr 1fr; }
-  }
-  @media (max-width: 700px) {
-    .filters { grid-template-columns: 1fr 1fr; }
-  }
-  .filter-group label {
-    display: block;
-    font-size: 10px;
-    color: var(--ink-dim);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    margin-bottom: 5px;
-  }
-  select, input[type="text"] {
-    width: 100%;
-    background: white;
-    color: var(--ink);
-    border: 1px solid var(--rule);
-    padding: 7px 9px;
-    border-radius: 0;
-    font-family: var(--sans);
-    font-size: 13px;
-    max-width: 100%;
-    text-overflow: ellipsis;
-  }
-  select { cursor: pointer; }
-  input[type="text"]::placeholder { color: var(--ink-dim); }
-  select:focus, input:focus { outline: 1px solid var(--ink); border-color: var(--ink); }
-  
-  /* ===== QUICK FILTERS ===== */
-  .quick-filters {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-    padding-top: 14px;
-    border-top: 1px solid var(--rule);
-  }
-  .qf-label {
-    font-size: 10px;
-    color: var(--ink-dim);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    margin-right: 4px;
-  }
-  .qf {
-    background: white;
-    border: 1px solid var(--rule);
-    padding: 5px 10px;
-    font-size: 11px;
-    font-family: var(--sans);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    cursor: pointer;
-    color: var(--ink);
-    transition: all 0.1s;
-  }
-  .qf:hover { border-color: var(--ink); }
-  .qf.active {
-    background: var(--ink);
-    color: white;
-    border-color: var(--ink);
-  }
-  .qf.accent.active {
-    background: var(--accent);
-    border-color: var(--accent);
-  }
-  
-  /* ===== RESULTS BAR ===== */
-  .results-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 14px;
-    flex-wrap: wrap;
-    gap: 12px;
-    font-size: 12px;
-  }
-  .results-count {
-    font-family: var(--serif);
-    font-size: 18px;
-    font-weight: 600;
-  }
-  .results-count .accent { color: var(--accent); }
-  .results-count .label {
-    font-family: var(--sans);
-    font-size: 11px;
-    color: var(--ink-dim);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    margin-left: 6px;
-    font-weight: 400;
-  }
-  .results-bar-right {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    font-size: 11px;
-    color: var(--ink-soft);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-  }
-  .results-bar-right select {
-    width: auto;
-    padding: 4px 6px;
-    font-size: 11px;
-  }
-  .btn-link {
-    background: none;
-    border: none;
-    color: var(--ink);
-    cursor: pointer;
-    font-family: var(--sans);
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    font-weight: 500;
-    border-bottom: 1px solid var(--ink);
-    padding: 0 0 1px 0;
-  }
-  .btn-link:hover { color: var(--accent); border-color: var(--accent); }
-  .btn-primary {
-    background: var(--ink);
-    color: white;
-    border: 1px solid var(--ink);
-    padding: 7px 14px;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    font-family: var(--sans);
-    font-weight: 500;
-    cursor: pointer;
-  }
-  .btn-primary:hover { background: var(--accent); border-color: var(--accent); }
-  
-  /* ===== CARDS ===== */
-  .grid { display: flex; flex-direction: column; }
-  .card {
-    background: var(--panel);
-    border: 1px solid var(--rule);
-    border-bottom: none;
-    padding: 18px 20px;
-    display: grid;
-    grid-template-columns: 110px 1fr 180px;
-    gap: 20px;
-    align-items: start;
-    transition: background 0.1s;
-  }
-  .card:last-child { border-bottom: 1px solid var(--rule); }
-  .card:hover { background: #fdfbf7; }
-  .card.thumb-down { opacity: 0.45; }
-  
-  .deadline-block {
-    border-right: 1px solid var(--rule);
-    padding-right: 18px;
-    text-align: left;
-  }
-  .deadline-status {
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--ink-dim);
-    margin-bottom: 6px;
-  }
-  .deadline-status.closed { color: var(--accent); font-weight: 600; }
-  .deadline-status.open { color: var(--green); font-weight: 600; }
-  .deadline-status.soon { color: var(--accent); font-weight: 600; }
-  .deadline-days {
-    font-family: var(--serif);
-    font-size: 36px;
-    font-weight: 600;
-    line-height: 1;
-  }
-  .deadline-days.green { color: var(--green); }
-  .deadline-days.amber { color: var(--amber); }
-  .deadline-days.red { color: var(--accent); }
-  .deadline-days-label {
-    font-size: 10px;
-    color: var(--ink-dim);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    margin-top: 2px;
-  }
-  .deadline-date {
-    font-size: 11px;
-    color: var(--ink-soft);
-    margin-top: 6px;
-    font-family: var(--sans);
-  }
-  
-  .card-body { min-width: 0; }
-  .card-tags {
-    display: flex;
-    gap: 6px;
-    margin-bottom: 8px;
-    flex-wrap: wrap;
-    align-items: center;
-  }
-  .tag {
-    font-size: 10px;
-    padding: 2px 7px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    font-weight: 500;
-  }
-  .tag.notice {
-    background: transparent;
-    color: var(--accent);
-    border: 1px solid var(--accent);
-  }
-  .tag.setaside {
-    background: var(--accent-soft);
-    color: var(--accent);
-  }
-  .tag.setaside.none {
-    background: #f0ede5;
-    color: var(--ink-dim);
-  }
-  .tag.sector {
-    background: transparent;
-    color: var(--ink-soft);
-    border: 1px solid var(--rule);
-  }
-  .card-title {
-    font-family: var(--serif);
-    font-size: 18px;
-    font-weight: 600;
-    margin-bottom: 6px;
-    line-height: 1.25;
-    color: var(--ink);
-  }
-  .card-agency {
-    font-size: 12px;
-    color: var(--ink-soft);
-    margin-bottom: 8px;
-  }
-  .card-agency strong {
-    color: var(--ink);
-    font-weight: 600;
-  }
-  .card-meta-row {
-    display: flex;
-    gap: 18px;
-    font-size: 11px;
-    color: var(--ink-dim);
-    flex-wrap: wrap;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-  }
-  .card-meta-row strong {
-    color: var(--ink);
-    font-weight: 500;
-    text-transform: none;
-    letter-spacing: 0;
-    font-size: 12px;
-    margin-left: 4px;
-  }
-  .card-description {
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px dashed var(--rule);
-    font-size: 13px;
-    color: var(--ink-soft);
-    line-height: 1.6;
-    max-height: 80px;
-    overflow: hidden;
-    position: relative;
-  }
-  .card.expanded .card-description { max-height: none; }
-  
-  .card-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    align-items: stretch;
-  }
-  .btn-sam {
-    background: var(--ink);
-    color: white;
-    border: 1px solid var(--ink);
-    padding: 8px 12px;
-    text-decoration: none;
-    font-size: 11px;
-    text-align: center;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    font-family: var(--sans);
-    font-weight: 500;
-  }
-  .btn-sam:hover { background: var(--accent); border-color: var(--accent); }
-  .btn-action {
-    background: white;
-    color: var(--ink);
-    border: 1px solid var(--rule);
-    padding: 7px 10px;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    font-family: var(--sans);
-    cursor: pointer;
-  }
-  .btn-action:hover { border-color: var(--ink); }
-  .rating-buttons {
-    display: flex;
-    gap: 6px;
-  }
-  .rating-buttons button {
-    flex: 1;
-    font-size: 16px;
-    padding: 5px;
-    background: white;
-    border: 1px solid var(--rule);
-    cursor: pointer;
-    font-family: inherit;
-  }
-  .rating-buttons button:hover { border-color: var(--ink); }
-  .rating-buttons .thumb-up.active {
-    background: rgba(45, 106, 62, 0.08);
-    border-color: var(--green);
-  }
-  .rating-buttons .thumb-down.active {
-    background: var(--accent-soft);
-    border-color: var(--accent);
-  }
-  
-  /* ===== EMPTY / LOADING ===== */
-  .empty, .loading {
-    background: var(--panel);
-    border: 1px solid var(--rule);
-    padding: 50px 30px;
-    text-align: center;
-  }
-  .empty h3 {
-    font-family: var(--serif);
-    font-size: 20px;
-    font-weight: 600;
-    margin-bottom: 6px;
-  }
-  .empty p, .loading p {
-    color: var(--ink-soft);
-    font-size: 13px;
-  }
-  
-  /* ===== PAGINATION ===== */
-  #pagination {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 4px;
-    margin-top: 24px;
-    flex-wrap: wrap;
-  }
-  #pagination button {
-    min-width: 36px;
-    padding: 7px 10px;
-    font-size: 12px;
-    background: white;
-    border: 1px solid var(--rule);
-    color: var(--ink);
-    cursor: pointer;
-    font-family: var(--sans);
-  }
-  #pagination button:hover:not(:disabled) { border-color: var(--ink); }
-  #pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
-  #pagination button.active {
-    background: var(--ink);
-    color: white;
-    border-color: var(--ink);
-  }
-  #pagination span {
-    color: var(--ink-dim);
-    padding: 0 4px;
-  }
-  
-  @media (max-width: 900px) {
-    .card { grid-template-columns: 100px 1fr; }
-    .card-actions { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; }
-    .card-actions .btn-sam, .card-actions .btn-action, .rating-buttons { flex: 1; min-width: 120px; }
-    .masthead { grid-template-columns: 1fr; }
-    .masthead-meta { text-align: left; }
-  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'IBM Plex Sans',sans-serif;background:var(--paper);color:var(--ink);
+    background-image:radial-gradient(circle at 1px 1px,rgba(19,33,27,.04) 1px,transparent 0);
+    background-size:22px 22px;line-height:1.45;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1280px;margin:0 auto;padding:28px 24px 80px}
+  header.top{display:flex;align-items:flex-end;justify-content:space-between;
+    border-bottom:2px solid var(--ink);padding-bottom:14px;margin-bottom:4px;flex-wrap:wrap;gap:12px}
+  .brand h1{font-family:'Fraunces',serif;font-weight:600;font-size:30px;letter-spacing:-.5px;line-height:1}
+  .brand .sub{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:2px;
+    text-transform:uppercase;color:var(--muted);margin-top:6px}
+  .refresh{font-family:'IBM Plex Mono',monospace;font-size:12px;border:1.5px solid var(--ink);
+    background:var(--card);padding:9px 16px;cursor:pointer;border-radius:2px;text-transform:uppercase;
+    letter-spacing:1px;transition:.15s;display:flex;align-items:center;gap:8px}
+  .refresh:hover{background:var(--ink);color:var(--paper)}
+  .refresh:disabled{opacity:.5;cursor:wait}
+
+  /* Tabs */
+  .tabs{display:flex;gap:0;margin:22px 0 0}
+  .tab{font-family:'Fraunces',serif;font-size:18px;font-weight:600;padding:11px 26px;cursor:pointer;
+    background:transparent;border:1.5px solid var(--line);border-bottom:none;color:var(--muted);
+    border-radius:6px 6px 0 0;position:relative;top:1.5px;transition:.15s}
+  .tab .count{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:400;
+    margin-left:8px;color:var(--gold)}
+  .tab:hover{color:var(--ink)}
+  .tab.active{background:var(--card);color:var(--ink);border-color:var(--ink);border-bottom:1.5px solid var(--card)}
+  .panel{border:1.5px solid var(--ink);background:var(--card);border-radius:0 6px 6px 6px;
+    box-shadow:var(--shadow);padding:18px}
+
+  /* Stats */
+  .stats{display:flex;gap:26px;flex-wrap:wrap;padding:4px 4px 16px;border-bottom:1px dashed var(--line);margin-bottom:16px}
+  .stat .n{font-family:'Fraunces',serif;font-size:26px;font-weight:700;line-height:1}
+  .stat .l{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1.5px;
+    text-transform:uppercase;color:var(--muted);margin-top:4px}
+  .stat.alert .n{color:var(--red)}
+
+  /* Controls */
+  .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+  .controls input[type=text],.controls select{font-family:'IBM Plex Sans',sans-serif;font-size:13px;
+    padding:8px 11px;border:1.5px solid var(--line);border-radius:3px;background:var(--paper);color:var(--ink)}
+  .controls select{flex:0 0 auto;width:160px;text-overflow:ellipsis}
+  .controls input[type=text]{flex:1 1 220px;min-width:180px;max-width:340px}
+  .controls input:focus,.controls select:focus{outline:none;border-color:var(--accent)}
+  .controls .ghost{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:8px 13px;
+    border:1.5px solid var(--line);background:var(--card);cursor:pointer;border-radius:3px;text-transform:uppercase;letter-spacing:1px}
+  .controls .ghost:hover{border-color:var(--ink)}
+  .controls .ghost.on{background:var(--gold);color:#fff;border-color:var(--gold)}
+  .controls .spacer{flex:1}
+
+  #tbl-federal,#tbl-indiana{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed;min-width:1060px}
+  col.c-title{width:21%} col.c-agency{width:18%} col.c-type{width:11%} col.c-set{width:17%}
+  col.c-naics{width:8%} col.c-state{width:6%} col.c-deadline{width:15%}
+  col.c-contact{width:20%} col.c-docs{width:8%} col.c-star{width:44px}
+  thead th{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;
+    color:var(--muted);text-align:left;padding:8px 10px;border-bottom:1.5px solid var(--ink);cursor:pointer;white-space:nowrap}
+  thead th:hover{color:var(--ink)}
+  tbody td{padding:11px 10px;border-bottom:1px solid var(--line);vertical-align:top;
+    overflow-wrap:anywhere;word-break:break-word}
+  th.col-star,td.col-star{width:42px;text-align:center;padding-left:4px;padding-right:4px}
+  tbody tr:hover{background:#faf7ee}
+  .t-title{font-weight:600}
+  .t-title a{color:var(--accent-d);text-decoration:none;border-bottom:1px solid transparent}
+  .t-title a:hover{border-bottom-color:var(--accent-d)}
+  .t-desc{color:var(--muted);font-size:12px;margin-top:3px;display:-webkit-box;
+    -webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .pill{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10px;padding:2px 7px;
+    border-radius:8px;background:#ece4d2;color:var(--accent-d);white-space:normal;max-width:100%;
+    overflow-wrap:anywhere;line-height:1.4}
+  .pill.sa{background:#efe3cb;color:var(--gold)}
+  .deadline{font-family:'IBM Plex Mono',monospace;white-space:nowrap}
+  .dl-soon{color:var(--red);font-weight:600}
+  .fav{cursor:pointer;font-size:18px;line-height:1;background:none;border:none;color:var(--line);transition:.15s}
+  .fav:hover{color:var(--gold);transform:scale(1.15)}
+  .fav.on{color:var(--gold)}
+  .mono{font-family:'IBM Plex Mono',monospace;font-size:12px}
+  .email{color:var(--accent-d);text-decoration:none}
+  .email:hover{text-decoration:underline}
+
+  .foot{display:flex;justify-content:space-between;align-items:center;margin-top:16px;flex-wrap:wrap;gap:10px}
+  .pager{display:flex;gap:6px;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:12px}
+  .pager button{border:1.5px solid var(--line);background:var(--card);padding:5px 11px;cursor:pointer;border-radius:3px}
+  .pager button:disabled{opacity:.4;cursor:default}
+  .msg{padding:40px;text-align:center;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:13px}
+  .err{color:var(--red)}
+  .hidden{display:none}
+  @media(max-width:720px){.t-desc{display:none}.brand h1{font-size:24px}}
 </style>
 </head>
 <body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>Contract Tracker</h1>
+      <div class="sub">Vantage Ops Group · Federal &amp; Indiana State</div>
+    </div>
+    <button class="refresh" id="refreshBtn">↻ Refresh</button>
+  </header>
 
-<header class="masthead">
-  <h1>Federal <em>Contracts</em><br>Dashboard</h1>
-  <div class="masthead-meta">
-    <div><span class="accent">SAM.GOV</span> · LIVE TRACKER</div>
-    <div>UPDATED <strong id="lastRefresh">—</strong></div>
-    <div>TOTAL RECORDS <strong id="totalCount">—</strong></div>
+  <div class="tabs">
+    <button class="tab active" data-tab="federal">Federal <span class="count" id="cnt-federal"></span></button>
+    <button class="tab" data-tab="indiana">Indiana State <span class="count" id="cnt-indiana"></span></button>
   </div>
-</header>
 
-<div class="stats" id="stats"></div>
+  <div class="panel">
+    <!-- ===== FEDERAL ===== -->
+    <section id="federal">
+      <div class="stats" id="stats-federal"></div>
+      <div class="controls">
+        <input type="text" id="q-federal" placeholder="Search title, agency, NAICS…">
+        <select id="f-type"><option value="">All notice types</option></select>
+        <select id="f-setaside"><option value="">All set-asides</option></select>
+        <select id="f-sector"><option value="">All sectors</option></select>
+        <select id="f-state"><option value="">All states</option></select>
+        <button class="ghost" id="fav-federal">★ Favorites</button>
+        <div class="spacer"></div>
+        <button class="ghost" id="csv-federal">⤓ CSV</button>
+      </div>
+      <div id="tbl-federal"></div>
+      <div class="foot" id="foot-federal"></div>
+    </section>
 
-<div class="controls">
-  <div class="filters">
-    <div class="filter-group">
-      <label>Search</label>
-      <input type="text" id="searchInput" placeholder="Title, agency, NAICS, solicitation #...">
-    </div>
-    <div class="filter-group">
-      <label>Agency</label>
-      <select id="agencyFilter"><option value="">All</option></select>
-    </div>
-    <div class="filter-group">
-      <label>Notice Type</label>
-      <select id="noticeTypeFilter"><option value="">All</option></select>
-    </div>
-    <div class="filter-group">
-      <label>Set-Aside</label>
-      <select id="setAsideFilter"><option value="">All</option></select>
-    </div>
-    <div class="filter-group">
-      <label>Sector</label>
-      <select id="sectorFilter"><option value="">All</option></select>
-    </div>
-    <div class="filter-group">
-      <label>State</label>
-      <select id="stateFilter"><option value="">All</option></select>
-    </div>
-  </div>
-  
-  <div class="quick-filters">
-    <span class="qf-label">View:</span>
-    <button class="qf active" data-view="all">All</button>
-    <button class="qf" data-view="open">Open Only</button>
-    <button class="qf" data-view="closing">Closing ≤7 Days</button>
-    <button class="qf" data-view="setasides">Set-Asides</button>
-    <button class="qf accent" data-view="thumb_up">👍 Thumbs Up</button>
-    <button class="qf" data-view="thumb_down">👎 Thumbs Down</button>
-    <button class="qf" data-view="unrated">Unrated</button>
-    <button class="btn-link" id="resetBtn" style="margin-left:auto">Reset Filters</button>
+    <!-- ===== INDIANA ===== -->
+    <section id="indiana" class="hidden">
+      <div class="stats" id="stats-indiana"></div>
+      <div class="controls">
+        <input type="text" id="q-indiana" placeholder="Search title, agency, description…">
+        <select id="i-agency"><option value="">All agencies</option></select>
+        <button class="ghost" id="fav-indiana">★ Favorites</button>
+        <div class="spacer"></div>
+        <button class="ghost" id="csv-indiana">⤓ CSV</button>
+      </div>
+      <div id="tbl-indiana"></div>
+      <div class="foot" id="foot-indiana"></div>
+    </section>
   </div>
 </div>
-
-<div class="results-bar">
-  <div class="results-count">
-    <span id="resultsNum" class="accent">—</span>
-    <span class="label">contracts · <span id="paginationInfo"></span></span>
-  </div>
-  <div class="results-bar-right">
-    <button class="btn-link" id="exportBtn">Export CSV</button>
-    <span>Per Page
-      <select id="perPage">
-        <option value="25">25</option>
-        <option value="50" selected>50</option>
-        <option value="100">100</option>
-        <option value="all">All</option>
-      </select>
-    </span>
-    <span>Sort
-      <select id="sortBy">
-        <option value="deadline_asc">Deadline (soonest)</option>
-        <option value="deadline_desc">Deadline (latest)</option>
-        <option value="posted_desc">Posted (newest)</option>
-        <option value="posted_asc">Posted (oldest)</option>
-        <option value="title_asc">Title (A-Z)</option>
-      </select>
-    </span>
-    <button class="btn-primary" id="refreshBtn">↻ Refresh</button>
-  </div>
-</div>
-
-<div id="grid" class="grid">
-  <div class="loading"><p>Loading contracts from Supabase…</p></div>
-</div>
-
-<div id="pagination"></div>
 
 <script>
-// ===== SUPABASE CONFIG =====
-const SUPABASE_URL = 'https://uiplzvlhihkrheflclou.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_RC22tCyni4kCUz3TaET2kw_lS_1V6yR';
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// ============================================================
+//  CONFIG — your Supabase project. The publishable key is safe
+//  to expose in frontend code (it only allows what your RLS
+//  policies permit). Do NOT paste the secret key here.
+// ============================================================
+const SUPABASE_URL = "https://uiplzvlhihkrheflclou.supabase.co";
+const SUPABASE_KEY = "sb_publishable_RC22tCyni4kCUz3TaET2kw_lS_1V6yR";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// ===== STATE =====
-let allRows = [];
-let ratingsMap = {};
-let filteredRows = [];
-let state = {
-  page: 1,
-  perPage: 50,
-  view: 'all',
-  expanded: new Set()
+const PAGE = 50;
+const state = {
+  federal:{ rows:[], view:[], page:1, sortKey:"deadline", sortDir:1, favOnly:false },
+  indiana:{ rows:[], view:[], page:1, sortKey:"response_due_by", sortDir:1, favOnly:false }
 };
 
-// ===== HELPERS =====
-function escapeHtml(s) {
-  if (s === null || s === undefined) return '';
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-}
+const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const today = new Date();
+function fmtDate(d){ if(!d) return "—"; const x=new Date(d); if(isNaN(x)) return esc(d);
+  return x.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}); }
+function daysLeft(d){ if(!d) return null; const x=new Date(d); if(isNaN(x)) return null;
+  return Math.ceil((x-today)/864e5); }
 
-function daysUntil(dateStr) {
-  if (!dateStr) return 999;
-  const d = new Date(dateStr);
-  if (isNaN(d)) return 999;
-  const today = new Date();
-  today.setHours(0,0,0,0);
-  return Math.floor((d - today) / 86400000);
-}
+// ---------- TABS ----------
+document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{
+  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+  t.classList.add("active");
+  const tab=t.dataset.tab;
+  document.getElementById("federal").classList.toggle("hidden",tab!=="federal");
+  document.getElementById("indiana").classList.toggle("hidden",tab!=="indiana");
+}));
 
-function deadlineColor(days) {
-  if (days < 0 || days >= 999) return 'red';
-  if (days <= 7) return 'red';
-  if (days <= 21) return 'amber';
-  return 'green';
-}
-
-function formatDate(d) {
-  if (!d) return '';
-  return new Date(d).toISOString().split('T')[0];
-}
-
-// ===== DATA LOADING =====
-async function loadData() {
-  document.getElementById('grid').innerHTML = '<div class="loading"><p>Loading contracts from Supabase…</p></div>';
-  document.getElementById('lastRefresh').textContent = 'REFRESHING…';
-  
-  try {
-    let contracts = [];
-    let from = 0;
-    const batchSize = 1000;
-    while (true) {
-      const { data, error } = await sb
-        .from('contracts')
-        .select('*')
-        .range(from, from + batchSize - 1);
-      if (error) throw error;
-      contracts = contracts.concat(data);
-      if (data.length < batchSize) break;
-      from += batchSize;
+// ============================================================
+//  FEDERAL  (reads from `contracts` table)
+// ============================================================
+async function loadFederal(){
+  const box=document.getElementById("tbl-federal");
+  box.innerHTML='<div class="msg">Loading federal contracts…</div>';
+  // Pull all rows in pages of 1000 (Supabase default cap)
+  let all=[], from=0;
+  try{
+    while(true){
+      const {data,error}=await sb.from("contracts").select("*").range(from,from+999);
+      if(error) throw error;
+      all=all.concat(data);
+      if(data.length<1000) break;
+      from+=1000;
     }
-    
-    const { data: ratings, error: rError } = await sb
-      .from('ratings')
-      .select('*');
-    if (rError) throw rError;
-    
-    ratingsMap = {};
-    ratings.forEach(r => { ratingsMap[r.notice_id] = r.rating; });
-    
-    allRows = contracts.map(c => ({
-      ...c,
-      days_left: daysUntil(c.deadline),
-      rating: ratingsMap[c.notice_id] || null
-    }));
-    
-    const now = new Date();
-    document.getElementById('lastRefresh').textContent = 
-      now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase() + 
-      ' · ' + now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-    document.getElementById('totalCount').textContent = allRows.length.toLocaleString();
-    
-    populateFilters();
-    render();
-  } catch (err) {
-    document.getElementById('grid').innerHTML = 
-      `<div class="empty"><h3>Failed to load data</h3><p>${escapeHtml(err.message)}</p></div>`;
-    document.getElementById('lastRefresh').textContent = 'ERROR';
-    console.error(err);
-  }
+  }catch(e){ box.innerHTML='<div class="msg err">Could not load federal contracts: '+esc(e.message)+
+    '<br><br>Check that RLS read policy is enabled on the <b>contracts</b> table.</div>'; return; }
+  state.federal.rows=all;
+  document.getElementById("cnt-federal").textContent=all.length;
+  buildFederalFilters(all);
+  renderFederal();
+}
+function buildFederalFilters(rows){
+  const fill=(id,key)=>{ const sel=document.getElementById(id);
+    const vals=[...new Set(rows.map(r=>r[key]).filter(Boolean))].sort();
+    sel.length=1; vals.forEach(v=>{const o=document.createElement("option");o.value=v;
+      o.textContent=v.length>42?v.slice(0,40)+"…":v; sel.appendChild(o);}); };
+  fill("f-type","notice_type"); fill("f-setaside","set_aside");
+  fill("f-sector","sector"); fill("f-state","state");
+}
+function federalFilter(){
+  const q=document.getElementById("q-federal").value.toLowerCase();
+  const ty=document.getElementById("f-type").value, sa=document.getElementById("f-setaside").value,
+        se=document.getElementById("f-sector").value, st=document.getElementById("f-state").value;
+  const favs=getFavs("federal");
+  state.federal.view=state.federal.rows.filter(r=>{
+    if(ty&&r.notice_type!==ty) return false;
+    if(sa&&r.set_aside!==sa) return false;
+    if(se&&r.sector!==se) return false;
+    if(st&&r.state!==st) return false;
+    if(state.federal.favOnly&&!favs.has(r.notice_id)) return false;
+    if(q){ const h=(r.title+" "+r.agency+" "+r.naics+" "+(r.solicitation||"")).toLowerCase();
+      if(!h.includes(q)) return false; }
+    return true;
+  });
+  sortRows("federal"); state.federal.page=1; renderFederal();
+}
+function renderFederal(){
+  const s=state.federal, favs=getFavs("federal");
+  const start=(s.page-1)*PAGE, slice=s.view.slice(start,start+PAGE);
+  const openCt=s.rows.filter(r=>{const d=daysLeft(r.deadline);return d===null||d>=0;}).length;
+  const soon=s.rows.filter(r=>{const d=daysLeft(r.deadline);return d!==null&&d>=0&&d<=7;}).length;
+  document.getElementById("stats-federal").innerHTML=
+    stat(s.rows.length,"Total")+stat(openCt,"Open")+stat(soon,"Closing ≤7d","alert")+
+    stat(favs.size,"Favorites");
+  if(!slice.length){document.getElementById("tbl-federal").innerHTML='<div class="msg">No matches.</div>';
+    document.getElementById("foot-federal").innerHTML="";return;}
+  let h='<table><colgroup><col class="c-title"><col class="c-agency"><col class="c-type"><col class="c-set"><col class="c-naics"><col class="c-state"><col class="c-deadline"><col class="c-star"></colgroup><thead><tr>'+
+    th("federal","title","Title")+th("federal","agency","Agency")+
+    th("federal","notice_type","Type")+th("federal","set_aside","Set-Aside")+
+    th("federal","naics","NAICS")+th("federal","state","State")+
+    th("federal","deadline","Deadline")+'<th class="col-star">★</th></tr></thead><tbody>';
+  slice.forEach(r=>{
+    const dl=daysLeft(r.deadline), soonC=dl!==null&&dl>=0&&dl<=7?"dl-soon":"";
+    h+='<tr><td class="t-title"><a href="'+esc(r.sam_link||"#")+'" target="_blank">'+esc(r.title)+'</a></td>'+
+      '<td>'+esc(r.agency)+'</td>'+
+      '<td>'+(r.notice_type?'<span class="pill">'+esc(r.notice_type)+'</span>':'—')+'</td>'+
+      '<td>'+(r.set_aside?'<span class="pill sa">'+esc(r.set_aside)+'</span>':'—')+'</td>'+
+      '<td class="mono">'+esc(r.naics||"—")+'</td>'+
+      '<td class="mono">'+esc(r.state||"—")+'</td>'+
+      '<td class="deadline '+soonC+'">'+fmtDate(r.deadline)+(dl!==null&&dl>=0?' <span style="color:var(--muted)">('+dl+'d)</span>':'')+'</td>'+
+      '<td class="col-star"><button class="fav '+(favs.has(r.notice_id)?"on":"")+'" data-id="'+esc(r.notice_id)+'" data-tab="federal">★</button></td></tr>';
+  });
+  h+='</tbody></table>';
+  document.getElementById("tbl-federal").innerHTML=h;
+  document.getElementById("foot-federal").innerHTML=footer("federal");
+  wireFavButtons("federal");
 }
 
-// ===== FILTER POPULATION =====
-function populateFilters() {
-  const fillSelect = (id, values) => {
-    const sel = document.getElementById(id);
-    const current = sel.value;
-    sel.innerHTML = '<option value="">All</option>';
-    [...new Set(values.filter(Boolean))].sort().forEach(v => {
-      const opt = document.createElement('option');
-      opt.value = v;
-      opt.textContent = v.length > 50 ? v.substring(0, 47) + '…' : v;
-      opt.title = v;
-      sel.appendChild(opt);
+// ============================================================
+//  INDIANA  (reads from `indiana_contracts_view`, favorites in `indiana_favorites`)
+// ============================================================
+async function loadIndiana(){
+  const box=document.getElementById("tbl-indiana");
+  box.innerHTML='<div class="msg">Loading Indiana contracts…</div>';
+  try{
+    const {data,error}=await sb.from("indiana_contracts_view").select("*").eq("is_active",true);
+    if(error) throw error;
+    state.indiana.rows=data;
+    document.getElementById("cnt-indiana").textContent=data.length;
+    const sel=document.getElementById("i-agency");
+    [...new Set(data.map(r=>r.agency).filter(Boolean))].sort().forEach(v=>{
+      const o=document.createElement("option");o.value=v;o.textContent=v;sel.appendChild(o);});
+    renderIndiana();
+  }catch(e){ box.innerHTML='<div class="msg err">Could not load Indiana contracts: '+esc(e.message)+
+    '<br><br>Check that RLS read policy is enabled on <b>indiana_contracts</b>.</div>'; }
+}
+function indianaFilter(){
+  const q=document.getElementById("q-indiana").value.toLowerCase();
+  const ag=document.getElementById("i-agency").value;
+  state.indiana.view=state.indiana.rows.filter(r=>{
+    if(ag&&r.agency!==ag) return false;
+    if(state.indiana.favOnly&&!r.is_favorited) return false;
+    if(q){ const h=(r.title+" "+r.agency+" "+(r.description||"")).toLowerCase();
+      if(!h.includes(q)) return false; }
+    return true;
+  });
+  sortRows("indiana"); state.indiana.page=1; renderIndiana();
+}
+function renderIndiana(){
+  const s=state.indiana;
+  if(!s.view.length && !s.favOnly && !document.getElementById("q-indiana").value
+     && !document.getElementById("i-agency").value){ s.view=s.rows.slice(); }
+  const start=(s.page-1)*PAGE, slice=s.view.slice(start,start+PAGE);
+  const soon=s.rows.filter(r=>{const d=daysLeft(r.response_due_by);return d!==null&&d>=0&&d<=7;}).length;
+  const favCt=s.rows.filter(r=>r.is_favorited).length;
+  document.getElementById("stats-indiana").innerHTML=
+    stat(s.rows.length,"Open Bids")+stat(soon,"Closing ≤7d","alert")+stat(favCt,"Favorites");
+  if(!slice.length){document.getElementById("tbl-indiana").innerHTML='<div class="msg">No matches.</div>';
+    document.getElementById("foot-indiana").innerHTML="";return;}
+  let h='<table><colgroup><col class="c-title"><col class="c-agency"><col class="c-deadline"><col class="c-contact"><col class="c-docs"><col class="c-star"></colgroup><thead><tr>'+
+    th("indiana","title","Title")+th("indiana","agency","Agency")+
+    th("indiana","response_due_by","Response Due")+th("indiana","contact_email","Contact")+
+    '<th>Docs</th><th class="col-star">★</th></tr></thead><tbody>';
+  slice.forEach(r=>{
+    const dl=daysLeft(r.response_due_by), soonC=dl!==null&&dl>=0&&dl<=7?"dl-soon":"";
+    h+='<tr><td class="t-title">'+(r.bid_docs_url?'<a href="'+esc(r.bid_docs_url)+'" target="_blank">'+esc(r.title)+'</a>':esc(r.title))+
+      (r.description?'<div class="t-desc">'+esc(r.description)+'</div>':'')+'</td>'+
+      '<td>'+esc(r.agency)+'</td>'+
+      '<td class="deadline '+soonC+'">'+fmtDate(r.response_due_by)+(dl!==null&&dl>=0?' <span style="color:var(--muted)">('+dl+'d)</span>':'')+'</td>'+
+      '<td>'+(r.contact_email?'<a class="email" href="mailto:'+esc(r.contact_email)+'">'+esc(r.contact_name||r.contact_email)+'</a>':'—')+'</td>'+
+      '<td>'+(r.bid_docs_url?'<a class="email" href="'+esc(r.bid_docs_url)+'" target="_blank">zip ⤓</a>':'—')+'</td>'+
+      '<td class="col-star"><button class="fav '+(r.is_favorited?"on":"")+'" data-id="'+esc(r.event_id)+'" data-tab="indiana">★</button></td></tr>';
+  });
+  h+='</tbody></table>';
+  document.getElementById("tbl-indiana").innerHTML=h;
+  document.getElementById("foot-indiana").innerHTML=footer("indiana");
+  wireFavButtons("indiana");
+}
+
+// ---------- shared helpers ----------
+function stat(n,l,cls=""){return '<div class="stat '+cls+'"><div class="n">'+n+'</div><div class="l">'+l+'</div></div>';}
+function th(tab,key,label){const s=state[tab];const arrow=s.sortKey===key?(s.sortDir>0?" ↑":" ↓"):"";
+  return '<th data-sort="'+key+'" data-tab="'+tab+'">'+label+arrow+'</th>';}
+function footer(tab){const s=state[tab];const pages=Math.max(1,Math.ceil(s.view.length/PAGE));
+  return '<div class="mono" style="color:var(--muted)">Showing '+
+    Math.min((s.page-1)*PAGE+1,s.view.length)+'–'+Math.min(s.page*PAGE,s.view.length)+' of '+s.view.length+'</div>'+
+    '<div class="pager"><button '+(s.page<=1?"disabled":"")+' data-pg="prev" data-tab="'+tab+'">‹ Prev</button>'+
+    '<span>'+s.page+' / '+pages+'</span>'+
+    '<button '+(s.page>=pages?"disabled":"")+' data-pg="next" data-tab="'+tab+'">Next ›</button></div>';}
+function sortRows(tab){const s=state[tab];const k=s.sortKey;
+  s.view.sort((a,b)=>{let x=a[k],y=b[k];
+    if(k==="deadline"||k==="response_due_by"){x=new Date(x||"2999");y=new Date(y||"2999");}
+    else{x=String(x||"").toLowerCase();y=String(y||"").toLowerCase();}
+    return x<y?-1*s.sortDir:x>y?1*s.sortDir:0;});}
+
+document.addEventListener("click",e=>{
+  const t=e.target.closest("[data-sort]");
+  if(t){const tab=t.dataset.tab,s=state[tab];
+    if(s.sortKey===t.dataset.sort)s.sortDir*=-1;else{s.sortKey=t.dataset.sort;s.sortDir=1;}
+    sortRows(tab); tab==="federal"?renderFederal():renderIndiana(); return;}
+  const p=e.target.closest("[data-pg]");
+  if(p){const tab=p.dataset.tab,s=state[tab];
+    s.page+=p.dataset.pg==="next"?1:-1; tab==="federal"?renderFederal():renderIndiana();}
+});
+
+// ---------- favorites ----------
+// Indiana favorites persist in Supabase (indiana_favorites table).
+// Federal favorites use localStorage for now — we can move them to a
+// Supabase table once we confirm how the federal side should store them.
+function getFavs(tab){
+  if(tab==="federal") return new Set(JSON.parse(localStorage.getItem("fed_favs")||"[]"));
+  return new Set(state.indiana.rows.filter(r=>r.is_favorited).map(r=>r.event_id));
+}
+function wireFavButtons(tab){
+  document.querySelectorAll('#'+tab+' .fav').forEach(btn=>{
+    btn.addEventListener("click",async()=>{
+      const id=btn.dataset.id;
+      if(tab==="federal"){
+        const favs=new Set(JSON.parse(localStorage.getItem("fed_favs")||"[]"));
+        favs.has(id)?favs.delete(id):favs.add(id);
+        localStorage.setItem("fed_favs",JSON.stringify([...favs]));
+        renderFederal();
+      }else{
+        const row=state.indiana.rows.find(r=>r.event_id===id);
+        const now=!row.is_favorited;
+        btn.classList.toggle("on",now); row.is_favorited=now; // optimistic
+        try{
+          if(now){ await sb.from("indiana_favorites").insert({event_id:id}); }
+          else{ await sb.from("indiana_favorites").delete().eq("event_id",id); }
+        }catch(err){ row.is_favorited=!now; btn.classList.toggle("on",!now);
+          alert("Couldn't save favorite — check RLS policies on indiana_favorites.\n"+err.message); }
+        renderIndiana();
+      }
     });
-    sel.value = current;
-  };
-  
-  fillSelect('noticeTypeFilter', allRows.map(r => r.notice_type));
-  fillSelect('setAsideFilter', allRows.map(r => r.set_aside));
-  fillSelect('sectorFilter', allRows.map(r => r.sector));
-  fillSelect('agencyFilter', allRows.map(r => r.agency));
-  fillSelect('stateFilter', allRows.map(r => r.state));
-}
-
-// ===== FILTERING =====
-function applyFilters() {
-  let rows = [...allRows];
-  
-  const search = document.getElementById('searchInput').value.toLowerCase();
-  if (search) {
-    rows = rows.filter(r =>
-      (r.title || '').toLowerCase().includes(search) ||
-      (r.agency || '').toLowerCase().includes(search) ||
-      (r.naics || '').toLowerCase().includes(search) ||
-      (r.solicitation || '').toLowerCase().includes(search)
-    );
-  }
-  
-  const filterIds = ['noticeType', 'setAside', 'sector', 'agency', 'state'];
-  const fields = ['notice_type', 'set_aside', 'sector', 'agency', 'state'];
-  filterIds.forEach((f, i) => {
-    const val = document.getElementById(f + 'Filter').value;
-    if (val) rows = rows.filter(r => r[fields[i]] === val);
   });
-  
-  if (state.view === 'thumb_up') rows = rows.filter(r => r.rating === 'up');
-  else if (state.view === 'thumb_down') rows = rows.filter(r => r.rating === 'down');
-  else if (state.view === 'unrated') rows = rows.filter(r => !r.rating);
-  else if (state.view === 'open') rows = rows.filter(r => r.days_left >= 0 && r.days_left < 999 && r.rating !== 'down');
-  else if (state.view === 'closing') rows = rows.filter(r => r.days_left >= 0 && r.days_left <= 7 && r.rating !== 'down');
-  else if (state.view === 'setasides') rows = rows.filter(r => r.set_aside && r.set_aside !== 'None' && r.rating !== 'down');
-  else if (state.view === 'all') rows = rows.filter(r => r.rating !== 'down');
-  
-  const sortBy = document.getElementById('sortBy').value;
-  rows.sort((a, b) => {
-    if (sortBy === 'deadline_asc') return a.days_left - b.days_left;
-    if (sortBy === 'deadline_desc') return b.days_left - a.days_left;
-    if (sortBy === 'posted_desc') return (b.posted || '').localeCompare(a.posted || '');
-    if (sortBy === 'posted_asc') return (a.posted || '').localeCompare(b.posted || '');
-    if (sortBy === 'title_asc') return (a.title || '').localeCompare(b.title || '');
-    return 0;
-  });
-  
-  return rows;
 }
-
-// ===== STATS =====
-function updateStats() {
-  const total = allRows.length;
-  const open = allRows.filter(r => r.days_left >= 0 && r.days_left < 999).length;
-  const closingSoon = allRows.filter(r => r.days_left >= 0 && r.days_left <= 7).length;
-  const setAsides = allRows.filter(r => r.set_aside && r.set_aside !== 'None').length;
-  const thumbsUp = Object.values(ratingsMap).filter(r => r === 'up').length;
-  const thumbsDown = Object.values(ratingsMap).filter(r => r === 'down').length;
-  
-  document.getElementById('stats').innerHTML = `
-    <div class="stat">
-      <div class="stat-label">Total Tracked</div>
-      <div class="stat-value">${total.toLocaleString()}</div>
-      <div class="stat-sub">All notices</div>
-    </div>
-    <div class="stat">
-      <div class="stat-label">Open Now</div>
-      <div class="stat-value">${open.toLocaleString()}</div>
-      <div class="stat-sub">Active deadlines</div>
-    </div>
-    <div class="stat">
-      <div class="stat-label">Closing ≤ 7 Days</div>
-      <div class="stat-value accent">${closingSoon.toLocaleString()}</div>
-      <div class="stat-sub">Act fast</div>
-    </div>
-    <div class="stat">
-      <div class="stat-label">Set-Asides</div>
-      <div class="stat-value">${setAsides.toLocaleString()}</div>
-      <div class="stat-sub">Small biz eligible</div>
-    </div>
-  `;
-}
-
-// ===== RATING =====
-async function setRating(noticeId, rating) {
-  const current = ratingsMap[noticeId];
-  
-  try {
-    if (current === rating) {
-      await sb.from('ratings').delete().eq('notice_id', noticeId);
-      delete ratingsMap[noticeId];
-    } else {
-      await sb.from('ratings').upsert({
-        notice_id: noticeId,
-        rating: rating,
-        rated_at: new Date().toISOString()
-      });
-      ratingsMap[noticeId] = rating;
-    }
-    
-    const row = allRows.find(r => r.notice_id === noticeId);
-    if (row) row.rating = ratingsMap[noticeId] || null;
-    
-    updateStats();
-    render();
-  } catch (err) {
-    alert('Failed to save rating: ' + err.message);
-  }
-}
-
-// ===== RENDER =====
-function render() {
-  filteredRows = applyFilters();
-  updateStats();
-  
-  const perPage = document.getElementById('perPage').value;
-  const total = filteredRows.length;
-  const itemsPerPage = perPage === 'all' ? total : parseInt(perPage);
-  const totalPages = perPage === 'all' ? 1 : Math.ceil(total / itemsPerPage);
-  if (state.page > totalPages) state.page = 1;
-  
-  const start = (state.page - 1) * itemsPerPage;
-  const end = perPage === 'all' ? total : start + itemsPerPage;
-  const pageRows = filteredRows.slice(start, end);
-  
-  document.getElementById('resultsNum').textContent = total.toLocaleString();
-  document.getElementById('paginationInfo').textContent = 
-    total === 0 ? 'no matches' : `showing ${start + 1}–${Math.min(end, total)} of ${total.toLocaleString()}`;
-  
-  const grid = document.getElementById('grid');
-  
-  if (total === 0) {
-    grid.innerHTML = '<div class="empty"><h3>No contracts match.</h3><p>Adjust the filters or reset.</p></div>';
-    document.getElementById('pagination').innerHTML = '';
-    return;
-  }
-  
-  grid.innerHTML = pageRows.map(r => {
-    const dCls = deadlineColor(r.days_left);
-    const isClosed = r.days_left < 0;
-    const isTBD = r.days_left >= 999;
-    const isSoon = !isClosed && !isTBD && r.days_left <= 7;
-    const isOpen = !isClosed && !isTBD;
-    
-    let statusText = '';
-    let statusClass = '';
-    if (isClosed) { statusText = 'CLOSED'; statusClass = 'closed'; }
-    else if (isTBD) { statusText = 'TBD'; statusClass = ''; }
-    else if (isSoon) { statusText = 'CLOSING SOON'; statusClass = 'soon'; }
-    else { statusText = 'OPEN'; statusClass = 'open'; }
-    
-    const dDisplay = isTBD ? '—' : (isClosed ? formatDate(r.deadline).split('-').slice(1).join('/') : r.days_left);
-    const dLabel = isTBD ? 'No deadline' : (isClosed ? 'Past due' : (r.days_left === 1 ? 'day left' : 'days left'));
-    
-    const isExp = state.expanded.has(r.notice_id);
-    const cardClass = r.rating === 'down' ? 'card thumb-down' : 'card';
-    
-    return `
-      <article class="${cardClass} ${isExp?'expanded':''}" data-id="${r.notice_id}">
-        <div class="deadline-block">
-          <div class="deadline-status ${statusClass}">${statusText}</div>
-          <div class="deadline-days ${dCls}">${dDisplay}</div>
-          <div class="deadline-days-label">${dLabel}</div>
-          <div class="deadline-date">${formatDate(r.deadline) || ''}</div>
-        </div>
-        <div class="card-body">
-          <div class="card-tags">
-            <span class="tag notice">${escapeHtml(r.notice_type || 'Unknown')}</span>
-            <span class="tag setaside ${(r.set_aside === 'None' || !r.set_aside) ? 'none' : ''}">${escapeHtml(r.set_aside || 'None')}</span>
-            <span class="tag sector">${escapeHtml(r.sector || 'N/A')}</span>
-          </div>
-          <h3 class="card-title">${escapeHtml(r.title)}</h3>
-          <div class="card-agency"><strong>${escapeHtml(r.agency)}</strong></div>
-          <div class="card-meta-row">
-            <span>Sol#<strong>${escapeHtml(r.solicitation || '—')}</strong></span>
-            <span>NAICS<strong>${escapeHtml(r.naics || '—')}</strong></span>
-            ${r.state && r.state !== 'N/A' ? `<span>State<strong>${escapeHtml(r.state)}</strong></span>` : ''}
-            <span>Posted<strong>${formatDate(r.posted) || '—'}</strong></span>
-          </div>
-          ${r.description ? `<div class="card-description">${escapeHtml(r.description)}</div>` : ''}
-        </div>
-        <div class="card-actions">
-          <a href="${escapeHtml(r.sam_link)}" target="_blank" rel="noopener" class="btn-sam">Open SAM.gov →</a>
-          <div class="rating-buttons">
-            <button class="thumb-up ${r.rating === 'up' ? 'active' : ''}" onclick="setRating('${r.notice_id}', 'up')" title="Thumbs up">👍</button>
-            <button class="thumb-down ${r.rating === 'down' ? 'active' : ''}" onclick="setRating('${r.notice_id}', 'down')" title="Thumbs down">👎</button>
-          </div>
-          ${r.description ? `<button class="btn-action" onclick="toggleExp('${r.notice_id}')">${isExp?'Hide Details':'Details'}</button>` : ''}
-        </div>
-      </article>
-    `;
-  }).join('');
-  
-  renderPagination(totalPages);
-}
-
-function renderPagination(totalPages) {
-  const pag = document.getElementById('pagination');
-  if (totalPages <= 1) { pag.innerHTML = ''; return; }
-  
-  let html = '';
-  html += `<button ${state.page === 1 ? 'disabled' : ''} onclick="setPage(${state.page - 1})">← Prev</button>`;
-  
-  const maxButtons = 7;
-  let startP = Math.max(1, state.page - Math.floor(maxButtons / 2));
-  let endP = Math.min(totalPages, startP + maxButtons - 1);
-  if (endP - startP < maxButtons - 1) startP = Math.max(1, endP - maxButtons + 1);
-  
-  if (startP > 1) html += `<button onclick="setPage(1)">1</button>${startP > 2 ? '<span>…</span>' : ''}`;
-  for (let i = startP; i <= endP; i++) {
-    html += `<button class="${i === state.page ? 'active' : ''}" onclick="setPage(${i})">${i}</button>`;
-  }
-  if (endP < totalPages) html += `${endP < totalPages - 1 ? '<span>…</span>' : ''}<button onclick="setPage(${totalPages})">${totalPages}</button>`;
-  
-  html += `<button ${state.page === totalPages ? 'disabled' : ''} onclick="setPage(${state.page + 1})">Next →</button>`;
-  pag.innerHTML = html;
-}
-
-function setPage(n) {
-  state.page = n;
-  render();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function toggleExp(id) {
-  if (state.expanded.has(id)) state.expanded.delete(id);
-  else state.expanded.add(id);
-  render();
-}
-
-// ===== EVENT LISTENERS =====
-['searchInput', 'noticeTypeFilter', 'setAsideFilter', 'sectorFilter', 'agencyFilter', 'stateFilter', 'sortBy', 'perPage']
-  .forEach(id => {
-    document.getElementById(id).addEventListener('input', () => { state.page = 1; render(); });
-    document.getElementById(id).addEventListener('change', () => { state.page = 1; render(); });
-  });
-
-document.querySelectorAll('.qf').forEach(t => {
-  t.addEventListener('click', () => {
-    document.querySelectorAll('.qf').forEach(x => x.classList.remove('active'));
-    t.classList.add('active');
-    state.view = t.dataset.view;
-    state.page = 1;
-    render();
+["fav-federal","fav-indiana"].forEach(id=>{
+  document.getElementById(id).addEventListener("click",e=>{
+    const tab=id.split("-")[1]; state[tab].favOnly=!state[tab].favOnly;
+    e.target.classList.toggle("on",state[tab].favOnly);
+    tab==="federal"?federalFilter():indianaFilter();
   });
 });
 
-document.getElementById('resetBtn').addEventListener('click', () => {
-  document.getElementById('searchInput').value = '';
-  ['noticeTypeFilter', 'setAsideFilter', 'sectorFilter', 'agencyFilter', 'stateFilter'].forEach(id => {
-    document.getElementById(id).value = '';
-  });
-  document.getElementById('sortBy').value = 'deadline_asc';
-  document.querySelectorAll('.qf').forEach(x => x.classList.remove('active'));
-  document.querySelector('.qf[data-view="all"]').classList.add('active');
-  state.view = 'all';
-  state.page = 1;
-  render();
+// ---------- CSV ----------
+function exportCSV(tab){
+  const rows=state[tab].view;
+  if(!rows.length){alert("Nothing to export.");return;}
+  const cols=Object.keys(rows[0]);
+  const csv=[cols.join(",")].concat(rows.map(r=>cols.map(c=>'"'+String(r[c]??"").replace(/"/g,'""')+'"').join(","))).join("\n");
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+  a.download=tab+"_contracts_"+new Date().toISOString().slice(0,10)+".csv"; a.click();
+}
+document.getElementById("csv-federal").addEventListener("click",()=>exportCSV("federal"));
+document.getElementById("csv-indiana").addEventListener("click",()=>exportCSV("indiana"));
+
+// ---------- search / filter wiring ----------
+["q-federal","f-type","f-setaside","f-sector","f-state"].forEach(id=>
+  document.getElementById(id).addEventListener("input",federalFilter));
+["q-indiana","i-agency"].forEach(id=>
+  document.getElementById(id).addEventListener("input",indianaFilter));
+
+// ---------- refresh ----------
+document.getElementById("refreshBtn").addEventListener("click",async function(){
+  this.disabled=true; this.textContent="↻ Refreshing…";
+  await Promise.all([loadFederal(),loadIndiana()]);
+  this.disabled=false; this.textContent="↻ Refresh";
 });
 
-document.getElementById('refreshBtn').addEventListener('click', loadData);
-
-document.getElementById('exportBtn').addEventListener('click', () => {
-  const headers = ['Title', 'Agency', 'Notice Type', 'Set-Aside', 'NAICS', 'Sector', 'State', 'Posted', 'Deadline', 'Days Left', 'Solicitation', 'Notice ID', 'Rating', 'SAM.gov Link'];
-  const rows = filteredRows.map(r => [
-    r.title, r.agency, r.notice_type, r.set_aside, r.naics, r.sector, r.state,
-    formatDate(r.posted), formatDate(r.deadline), 
-    r.days_left >= 999 ? 'TBD' : r.days_left,
-    r.solicitation, r.notice_id, r.rating || '', r.sam_link
-  ]);
-  const csv = [headers.join(',')].concat(
-    rows.map(r => r.map(v => '"' + String(v ?? '').replace(/"/g, '""') + '"').join(','))
-  ).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'contracts_export_' + new Date().toISOString().split('T')[0] + '.csv';
-  a.click();
-});
-
-loadData();
+// ---------- init ----------
+(async function(){
+  await loadFederal();
+  state.federal.view=state.federal.rows.slice(); sortRows("federal"); renderFederal();
+  await loadIndiana();
+  state.indiana.view=state.indiana.rows.slice(); sortRows("indiana"); renderIndiana();
+})();
 </script>
-
 </body>
 </html>
