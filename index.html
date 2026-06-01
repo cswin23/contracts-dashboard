@@ -66,13 +66,13 @@
   table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed;min-width:1060px}
   col.c-title{width:21%} col.c-agency{width:18%} col.c-type{width:11%} col.c-set{width:17%}
   col.c-naics{width:8%} col.c-state{width:6%} col.c-deadline{width:15%}
-  col.c-contact{width:20%} col.c-docs{width:8%} col.c-star{width:44px}
+  col.c-contact{width:20%} col.c-docs{width:8%} col.c-star{width:104px}
   thead th{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;
     color:var(--muted);text-align:left;padding:8px 10px;border-bottom:1.5px solid var(--ink);cursor:pointer;white-space:nowrap}
   thead th:hover{color:var(--ink)}
   tbody td{padding:11px 10px;border-bottom:1px solid var(--line);vertical-align:top;
     overflow-wrap:anywhere;word-break:break-word}
-  th.col-star,td.col-star{width:42px;text-align:center;padding-left:4px;padding-right:4px}
+  th.col-star,td.col-star{width:104px;text-align:center;padding-left:4px;padding-right:4px}
   tbody tr:hover{background:#faf7ee}
   .t-title{font-weight:600}
   .t-title a{color:var(--accent-d);text-decoration:none;border-bottom:1px solid transparent}
@@ -99,6 +99,44 @@
   .msg{padding:40px;text-align:center;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:13px}
   .err{color:var(--red)}
   .hidden{display:none}
+
+  /* Row action buttons (log submission / dismiss) */
+  .rowacts{display:flex;gap:4px;align-items:center;justify-content:center;flex-wrap:wrap}
+  .act{cursor:pointer;border:1px solid var(--line);background:var(--card);border-radius:3px;
+    font-size:12px;line-height:1;padding:3px 5px;color:var(--muted);transition:.12s}
+  .act.sub:hover{border-color:var(--accent);color:var(--accent)}
+  .act.sub.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .act.dis:hover{border-color:var(--red);color:var(--red)}
+  .act.res:hover{border-color:var(--accent);color:var(--accent)}
+
+  /* Submission cards */
+  #tbl-submissions{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:16px}
+  .scard{border:1.5px solid var(--line);border-radius:6px;background:var(--paper);padding:16px 16px 12px;
+    box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px}
+  .scard-h{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+  .src-tag{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;
+    padding:2px 6px;border-radius:8px;margin-right:8px;vertical-align:middle}
+  .src-tag.federal{background:#dce8e1;color:var(--accent-d)}
+  .src-tag.indiana{background:#efe3cb;color:var(--gold)}
+  .scard-title{font-family:'Fraunces',serif;font-weight:600;font-size:17px;color:var(--accent-d);
+    text-decoration:none;border-bottom:1px solid transparent}
+  .scard-title:hover{border-bottom-color:var(--accent-d)}
+  .scard-agency{font-size:12px;color:var(--muted);margin-top:3px}
+  .scard-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .scard label{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;
+    color:var(--muted);display:flex;flex-direction:column;gap:4px}
+  .scard input,.scard select,.scard textarea{font-family:'IBM Plex Sans',sans-serif;font-size:13px;
+    padding:7px 9px;border:1.5px solid var(--line);border-radius:3px;background:var(--card);color:var(--ink);
+    text-transform:none;letter-spacing:0}
+  .scard input:focus,.scard select:focus,.scard textarea:focus{outline:none;border-color:var(--accent)}
+  .scard-notes{grid-column:1/-1}
+  .scard textarea{resize:vertical}
+  .scard-foot{display:flex;justify-content:space-between;align-items:center;font-family:'IBM Plex Mono',monospace;
+    font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+  .scard-foot .saved{color:var(--accent)}
+  .attach-soon{opacity:.6}
+  @media(max-width:520px){#tbl-submissions{grid-template-columns:1fr}}
+
   @media(max-width:720px){.t-desc{display:none}.brand h1{font-size:24px}}
 </style>
 </head>
@@ -115,6 +153,7 @@
   <div class="tabs">
     <button class="tab active" data-tab="federal">Federal <span class="count" id="cnt-federal"></span></button>
     <button class="tab" data-tab="indiana">Indiana State <span class="count" id="cnt-indiana"></span></button>
+    <button class="tab" data-tab="submissions">Submissions <span class="count" id="cnt-submissions"></span></button>
   </div>
 
   <div class="panel">
@@ -128,6 +167,8 @@
         <select id="f-sector"><option value="">All sectors</option></select>
         <select id="f-state"><option value="">All states</option></select>
         <button class="ghost" id="fav-federal">★ Favorites</button>
+        <button class="ghost" id="exp-federal" title="Also show past-due opportunities">⏷ Expired</button>
+        <button class="ghost" id="dis-federal" title="Also show items marked not a fit">⤺ Dismissed</button>
         <div class="spacer"></div>
         <button class="ghost" id="csv-federal">⤓ CSV</button>
       </div>
@@ -142,11 +183,19 @@
         <input type="text" id="q-indiana" placeholder="Search title, agency, description…">
         <select id="i-agency"><option value="">All agencies</option></select>
         <button class="ghost" id="fav-indiana">★ Favorites</button>
+        <button class="ghost" id="exp-indiana" title="Also show past-due opportunities">⏷ Expired</button>
+        <button class="ghost" id="dis-indiana" title="Also show items marked not a fit">⤺ Dismissed</button>
         <div class="spacer"></div>
         <button class="ghost" id="csv-indiana">⤓ CSV</button>
       </div>
       <div id="tbl-indiana"></div>
       <div class="foot" id="foot-indiana"></div>
+    </section>
+
+    <!-- ===== SUBMISSIONS ===== -->
+    <section id="submissions" class="hidden">
+      <div class="stats" id="stats-submissions"></div>
+      <div id="tbl-submissions"></div>
     </section>
   </div>
 </div>
@@ -167,6 +216,19 @@ const state = {
   indiana:{ rows:[], view:[], page:1, sortKey:"response_due_by", sortDir:1, favOnly:false }
 };
 
+// Dismissed listings + view toggles, per tab. Dismissed items live in the
+// Supabase `dismissed` table (keyed source+item_id) so daily scraper runs
+// never wipe them — same integrity model as favorites.
+const hidden = {
+  federal:{ dismissed:new Set(), showExpired:false, showDismissed:false },
+  indiana:{ dismissed:new Set(), showExpired:false, showDismissed:false }
+};
+// Which contracts already have a submission logged (so we never hide them
+// and can show the ＋ button as "logged").
+const submittedIds = { federal:new Set(), indiana:new Set() };
+let submissions = [];
+const SUB_STATUSES = ["Preparing","Submitted","Won","Lost","Withdrawn"];
+
 const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const today = new Date();
 function fmtDate(d){ if(!d) return "—"; const x=new Date(d); if(isNaN(x)) return esc(d);
@@ -179,9 +241,17 @@ document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{
   document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
   t.classList.add("active");
   const tab=t.dataset.tab;
-  document.getElementById("federal").classList.toggle("hidden",tab!=="federal");
-  document.getElementById("indiana").classList.toggle("hidden",tab!=="indiana");
+  ["federal","indiana","submissions"].forEach(id=>
+    document.getElementById(id).classList.toggle("hidden",id!==tab));
 }));
+
+// ---------- expired helper ----------
+// A row is expired if its deadline is strictly in the past.
+function isExpired(tab,r){
+  const d = tab==="federal" ? r.deadline : r.response_due_by;
+  const dl = daysLeft(d);
+  return dl!==null && dl<0;
+}
 
 // ============================================================
 //  FEDERAL  (reads from `contracts` table)
@@ -225,6 +295,11 @@ function federalFilter(){
     if(se&&r.sector!==se) return false;
     if(st&&r.state!==st) return false;
     if(state.federal.favOnly&&!favs.has(r.notice_id)) return false;
+    // hide dismissed unless "Dismissed" toggle is on
+    if(!hidden.federal.showDismissed && hidden.federal.dismissed.has(r.notice_id)) return false;
+    // hide expired unless toggle on — but never hide favorited or submitted
+    if(!hidden.federal.showExpired && isExpired("federal",r)
+       && !favs.has(r.notice_id) && !submittedIds.federal.has(r.notice_id)) return false;
     if(q){ const h=(r.title+" "+r.agency+" "+r.naics+" "+(r.solicitation||"")).toLowerCase();
       if(!h.includes(q)) return false; }
     return true;
@@ -255,7 +330,9 @@ function renderFederal(){
       '<td class="mono">'+esc(r.naics||"—")+'</td>'+
       '<td class="mono">'+esc(r.state||"—")+'</td>'+
       '<td class="deadline '+soonC+'">'+fmtDate(r.deadline)+(dl!==null&&dl>=0?' <span style="color:var(--muted)">('+dl+'d)</span>':'')+'</td>'+
-      '<td class="col-star"><button class="fav '+(favs.has(r.notice_id)?"on":"")+'" data-id="'+esc(r.notice_id)+'" data-tab="federal">★</button></td></tr>';
+      '<td class="col-star">'+rowActions("federal",r.notice_id,
+        '<button class="fav '+(favs.has(r.notice_id)?"on":"")+'" data-id="'+esc(r.notice_id)+'" data-tab="federal">★</button>')+
+      '</td></tr>';
   });
   h+='</tbody></table>';
   document.getElementById("tbl-federal").innerHTML=h;
@@ -287,6 +364,9 @@ function indianaFilter(){
   state.indiana.view=state.indiana.rows.filter(r=>{
     if(ag&&r.agency!==ag) return false;
     if(state.indiana.favOnly&&!r.is_favorited) return false;
+    if(!hidden.indiana.showDismissed && hidden.indiana.dismissed.has(r.event_id)) return false;
+    if(!hidden.indiana.showExpired && isExpired("indiana",r)
+       && !r.is_favorited && !submittedIds.indiana.has(r.event_id)) return false;
     if(q){ const h=(r.title+" "+r.agency+" "+(r.description||"")).toLowerCase();
       if(!h.includes(q)) return false; }
     return true;
@@ -295,8 +375,6 @@ function indianaFilter(){
 }
 function renderIndiana(){
   const s=state.indiana;
-  if(!s.view.length && !s.favOnly && !document.getElementById("q-indiana").value
-     && !document.getElementById("i-agency").value){ s.view=s.rows.slice(); }
   const start=(s.page-1)*PAGE, slice=s.view.slice(start,start+PAGE);
   const soon=s.rows.filter(r=>{const d=daysLeft(r.response_due_by);return d!==null&&d>=0&&d<=7;}).length;
   const favCt=s.rows.filter(r=>r.is_favorited).length;
@@ -316,7 +394,9 @@ function renderIndiana(){
       '<td class="deadline '+soonC+'">'+fmtDate(r.response_due_by)+(dl!==null&&dl>=0?' <span style="color:var(--muted)">('+dl+'d)</span>':'')+'</td>'+
       '<td>'+(r.contact_email?'<a class="email" href="mailto:'+esc(r.contact_email)+'">'+esc(r.contact_name||r.contact_email)+'</a>':'—')+'</td>'+
       '<td>'+(r.bid_docs_url?'<a class="email" href="'+esc(r.bid_docs_url)+'" target="_blank">zip ⤓</a>':'—')+'</td>'+
-      '<td class="col-star"><button class="fav '+(r.is_favorited?"on":"")+'" data-id="'+esc(r.event_id)+'" data-tab="indiana">★</button></td></tr>';
+      '<td class="col-star">'+rowActions("indiana",r.event_id,
+        '<button class="fav '+(r.is_favorited?"on":"")+'" data-id="'+esc(r.event_id)+'" data-tab="indiana">★</button>')+
+      '</td></tr>';
   });
   h+='</tbody></table>';
   document.getElementById("tbl-indiana").innerHTML=h;
@@ -389,6 +469,155 @@ function wireFavButtons(tab){
   });
 });
 
+// ---------- row action buttons (dismiss / log submission) ----------
+function rowActions(tab,id,favBtnHtml){
+  const dismissed=hidden[tab].dismissed.has(id);
+  const submitted=submittedIds[tab].has(id);
+  let h='<div class="rowacts">'+favBtnHtml;
+  h+='<button class="act sub'+(submitted?' on':'')+'" data-act="sub" data-id="'+esc(id)+'" data-tab="'+tab+'" title="'+
+     (submitted?'Logged — open Submissions':'Log a submission')+'">＋</button>';
+  if(dismissed)
+    h+='<button class="act res" data-act="restore" data-id="'+esc(id)+'" data-tab="'+tab+'" title="Restore">↩</button>';
+  else
+    h+='<button class="act dis" data-act="dismiss" data-id="'+esc(id)+'" data-tab="'+tab+'" title="Not a fit — hide">✕</button>';
+  return h+'</div>';
+}
+
+// ---------- dismissed (Supabase `dismissed` table) ----------
+async function loadDismissed(){
+  try{
+    const {data,error}=await sb.from("dismissed").select("*");
+    if(error) throw error;
+    hidden.federal.dismissed=new Set(data.filter(d=>d.source==="federal").map(d=>d.item_id));
+    hidden.indiana.dismissed=new Set(data.filter(d=>d.source==="indiana").map(d=>d.item_id));
+  }catch(e){ console.warn("Could not load dismissed list:",e.message); }
+}
+
+// ---------- submissions (Supabase `submissions` table) ----------
+async function loadSubmissions(){
+  try{
+    const {data,error}=await sb.from("submissions").select("*").order("updated_at",{ascending:false});
+    if(error) throw error;
+    submissions=data;
+    submittedIds.federal=new Set(data.filter(d=>d.source==="federal").map(d=>d.item_id));
+    submittedIds.indiana=new Set(data.filter(d=>d.source==="indiana").map(d=>d.item_id));
+    document.getElementById("cnt-submissions").textContent=data.length;
+  }catch(e){ console.warn("Could not load submissions:",e.message); }
+}
+async function logSubmission(tab,id){
+  if(submittedIds[tab].has(id)){ document.querySelector('.tab[data-tab="submissions"]').click(); return; }
+  const row = tab==="federal"
+    ? state.federal.rows.find(r=>r.notice_id===id)
+    : state.indiana.rows.find(r=>r.event_id===id);
+  const rec={ source:tab, item_id:id,
+    title: row?row.title:"",
+    agency: row?row.agency:"",
+    link: tab==="federal" ? (row&&row.sam_link||"") : (row&&row.bid_docs_url||""),
+    status:"Preparing" };
+  try{
+    const {data,error}=await sb.from("submissions").insert(rec).select();
+    if(error) throw error;
+    submissions.unshift(data[0]); submittedIds[tab].add(id);
+    document.getElementById("cnt-submissions").textContent=submissions.length;
+    renderSubmissions();
+    tab==="federal"?renderFederal():renderIndiana();
+    document.querySelector('.tab[data-tab="submissions"]').click();
+  }catch(e){ alert("Couldn't log submission — check RLS policies on the submissions table.\n"+e.message); }
+}
+function subStats(){
+  const by=s=>submissions.filter(x=>x.status===s).length;
+  document.getElementById("stats-submissions").innerHTML=
+    stat(submissions.length,"Tracked")+stat(by("Submitted"),"Submitted")+
+    stat(by("Won"),"Won")+stat(by("Lost"),"Lost","alert");
+}
+function renderSubmissions(){
+  const box=document.getElementById("tbl-submissions");
+  if(!submissions.length){
+    document.getElementById("stats-submissions").innerHTML="";
+    box.innerHTML='<div class="msg">No submissions logged yet. On the Federal or Indiana tab, '+
+      'click the ＋ button on a contract to start tracking it here.</div>';
+    return;
+  }
+  subStats();
+  box.innerHTML=submissions.map(s=>{
+    const opts=SUB_STATUSES.map(o=>'<option '+(s.status===o?'selected':'')+'>'+o+'</option>').join("");
+    return '<div class="scard" data-sid="'+esc(s.id)+'">'+
+      '<div class="scard-h"><div>'+
+        '<span class="src-tag '+esc(s.source)+'">'+esc(s.source)+'</span>'+
+        '<a class="scard-title" href="'+esc(s.link||"#")+'" target="_blank">'+esc(s.title||"(untitled)")+'</a>'+
+        '<div class="scard-agency">'+esc(s.agency||"")+'</div>'+
+      '</div><button class="act dis" data-del="'+esc(s.id)+'" title="Remove from submissions">✕</button></div>'+
+      '<div class="scard-grid">'+
+        '<label>Status<select data-f="status">'+opts+'</select></label>'+
+        '<label>Date submitted<input type="date" data-f="date_submitted" value="'+esc(s.date_submitted||"")+'"></label>'+
+        '<label>Bid amount<input type="number" step="0.01" data-f="bid_amount" value="'+(s.bid_amount??"")+'" placeholder="0.00"></label>'+
+        '<label>&nbsp;</label>'+
+      '</div>'+
+      '<label class="scard-notes">Notes<textarea data-f="notes" rows="3" placeholder="POC, next steps, internal notes…">'+esc(s.notes||"")+'</textarea></label>'+
+      '<div class="scard-foot"><span class="saved" data-saved></span>'+
+        '<span class="attach-soon">📎 Attachments — coming soon</span></div>'+
+    '</div>';
+  }).join("");
+}
+
+// save card edits (status / date / amount / notes) back to Supabase
+document.addEventListener("change",async e=>{
+  const f=e.target.closest("[data-f]"); if(!f) return;
+  const card=f.closest(".scard"); if(!card) return;
+  const sid=card.dataset.sid, field=f.dataset.f; let val=f.value;
+  if(field==="bid_amount") val = val===""?null:Number(val);
+  if(field==="date_submitted" && val==="") val=null;
+  const patch={updated_at:new Date().toISOString()}; patch[field]=val;
+  const tag=card.querySelector("[data-saved]"); if(tag) tag.textContent="Saving…";
+  try{
+    const {error}=await sb.from("submissions").update(patch).eq("id",sid);
+    if(error) throw error;
+    const rec=submissions.find(x=>x.id===sid); if(rec) Object.assign(rec,patch);
+    if(tag) tag.textContent="Saved ✓";
+    if(field==="status") subStats();
+  }catch(err){ if(tag) tag.textContent="Save failed"; alert("Couldn't save: "+err.message); }
+});
+
+// dismiss / restore / log-submission / delete-submission (delegated)
+document.addEventListener("click",async e=>{
+  const del=e.target.closest("[data-del]");
+  if(del){
+    if(!confirm("Remove this from your submissions log? The contract itself stays in its tab.")) return;
+    const sid=del.dataset.del, rec=submissions.find(x=>x.id===sid);
+    try{
+      const {error}=await sb.from("submissions").delete().eq("id",sid); if(error) throw error;
+      submissions=submissions.filter(x=>x.id!==sid);
+      if(rec) submittedIds[rec.source].delete(rec.item_id);
+      document.getElementById("cnt-submissions").textContent=submissions.length;
+      renderSubmissions(); renderFederal(); renderIndiana();
+    }catch(err){ alert("Couldn't remove: "+err.message); }
+    return;
+  }
+  const a=e.target.closest("[data-act]"); if(!a) return;
+  const tab=a.dataset.tab, id=a.dataset.id, act=a.dataset.act;
+  if(act==="dismiss"){
+    hidden[tab].dismissed.add(id);
+    try{ await sb.from("dismissed").insert({source:tab,item_id:id}); }catch(_){}
+    tab==="federal"?federalFilter():indianaFilter();
+  }else if(act==="restore"){
+    hidden[tab].dismissed.delete(id);
+    try{ await sb.from("dismissed").delete().eq("source",tab).eq("item_id",id); }catch(_){}
+    tab==="federal"?federalFilter():indianaFilter();
+  }else if(act==="sub"){
+    await logSubmission(tab,id);
+  }
+});
+
+// expired / dismissed view toggles
+[["exp-federal","federal","showExpired",()=>federalFilter()],
+ ["dis-federal","federal","showDismissed",()=>federalFilter()],
+ ["exp-indiana","indiana","showExpired",()=>indianaFilter()],
+ ["dis-indiana","indiana","showDismissed",()=>indianaFilter()]].forEach(([id,tab,key,fn])=>{
+  const b=document.getElementById(id); if(!b) return;
+  b.addEventListener("click",()=>{ hidden[tab][key]=!hidden[tab][key];
+    b.classList.toggle("on",hidden[tab][key]); fn(); });
+});
+
 // ---------- CSV ----------
 function exportCSV(tab){
   const rows=state[tab].view;
@@ -417,10 +646,12 @@ document.getElementById("refreshBtn").addEventListener("click",async function(){
 
 // ---------- init ----------
 (async function(){
+  await Promise.all([loadDismissed(), loadSubmissions()]);
   await loadFederal();
-  state.federal.view=state.federal.rows.slice(); sortRows("federal"); renderFederal();
+  sortRows("federal"); federalFilter();
   await loadIndiana();
-  state.indiana.view=state.indiana.rows.slice(); sortRows("indiana"); renderIndiana();
+  sortRows("indiana"); indianaFilter();
+  renderSubmissions();
 })();
 </script>
 </body>
