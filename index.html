@@ -63,9 +63,9 @@
   .controls .spacer{flex:1}
 
   #tbl-federal,#tbl-indiana{overflow-x:auto}
-  table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed;min-width:1060px}
-  col.c-title{width:21%} col.c-agency{width:18%} col.c-type{width:11%} col.c-set{width:17%}
-  col.c-naics{width:8%} col.c-state{width:6%} col.c-deadline{width:15%}
+  table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed;min-width:1160px}
+  col.c-title{width:19%} col.c-agency{width:16%} col.c-type{width:10%} col.c-set{width:14%}
+  col.c-naics{width:7%} col.c-state{width:5%} col.c-posted{width:11%} col.c-deadline{width:13%}
   col.c-contact{width:20%} col.c-docs{width:8%} col.c-star{width:104px}
   thead th{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;
     color:var(--muted);text-align:left;padding:8px 10px;border-bottom:1.5px solid var(--ink);cursor:pointer;white-space:nowrap}
@@ -316,10 +316,11 @@ function renderFederal(){
     stat(favs.size,"Favorites");
   if(!slice.length){document.getElementById("tbl-federal").innerHTML='<div class="msg">No matches.</div>';
     document.getElementById("foot-federal").innerHTML="";return;}
-  let h='<table><colgroup><col class="c-title"><col class="c-agency"><col class="c-type"><col class="c-set"><col class="c-naics"><col class="c-state"><col class="c-deadline"><col class="c-star"></colgroup><thead><tr>'+
+  let h='<table><colgroup><col class="c-title"><col class="c-agency"><col class="c-type"><col class="c-set"><col class="c-naics"><col class="c-state"><col class="c-posted"><col class="c-deadline"><col class="c-star"></colgroup><thead><tr>'+
     th("federal","title","Title")+th("federal","agency","Agency")+
     th("federal","notice_type","Type")+th("federal","set_aside","Set-Aside")+
     th("federal","naics","NAICS")+th("federal","state","State")+
+    th("federal","posted","Posted")+
     th("federal","deadline","Deadline")+'<th class="col-star">★</th></tr></thead><tbody>';
   slice.forEach(r=>{
     const dl=daysLeft(r.deadline), soonC=dl!==null&&dl>=0&&dl<=7?"dl-soon":"";
@@ -329,6 +330,7 @@ function renderFederal(){
       '<td>'+(r.set_aside?'<span class="pill sa">'+esc(r.set_aside)+'</span>':'—')+'</td>'+
       '<td class="mono">'+esc(r.naics||"—")+'</td>'+
       '<td class="mono">'+esc(r.state||"—")+'</td>'+
+      '<td class="deadline">'+fmtDate(r.posted)+'</td>'+
       '<td class="deadline '+soonC+'">'+fmtDate(r.deadline)+(dl!==null&&dl>=0?' <span style="color:var(--muted)">('+dl+'d)</span>':'')+'</td>'+
       '<td class="col-star">'+rowActions("federal",r.notice_id,
         '<button class="fav '+(favs.has(r.notice_id)?"on":"")+'" data-id="'+esc(r.notice_id)+'" data-tab="federal">★</button>')+
@@ -416,7 +418,7 @@ function footer(tab){const s=state[tab];const pages=Math.max(1,Math.ceil(s.view.
     '<button '+(s.page>=pages?"disabled":"")+' data-pg="next" data-tab="'+tab+'">Next ›</button></div>';}
 function sortRows(tab){const s=state[tab];const k=s.sortKey;
   s.view.sort((a,b)=>{let x=a[k],y=b[k];
-    if(k==="deadline"||k==="response_due_by"){x=new Date(x||"2999");y=new Date(y||"2999");}
+    if(k==="deadline"||k==="response_due_by"||k==="posted"){x=new Date(x||"2999");y=new Date(y||"2999");}
     else{x=String(x||"").toLowerCase();y=String(y||"").toLowerCase();}
     return x<y?-1*s.sortDir:x>y?1*s.sortDir:0;});}
 
