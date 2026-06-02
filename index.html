@@ -98,6 +98,11 @@
   .pager{display:flex;gap:6px;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:12px}
   .pager button{border:1.5px solid var(--line);background:var(--card);padding:5px 11px;cursor:pointer;border-radius:3px}
   .pager button:disabled{opacity:.4;cursor:default}
+  .pager .pg-input{width:50px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:12px;
+    padding:5px 4px;border:1.5px solid var(--line);border-radius:3px;background:var(--paper);color:var(--ink);
+    margin:0 2px;-moz-appearance:textfield}
+  .pager .pg-input::-webkit-outer-spin-button,.pager .pg-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .pager .pg-input:focus{outline:none;border-color:var(--accent)}
   .msg{padding:40px;text-align:center;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:13px}
   .err{color:var(--red)}
   .hidden{display:none}
@@ -376,6 +381,8 @@ function federalFilter(){
 }
 function renderFederal(){
   const s=state.federal, favs=getFavs("federal");
+  const pages=Math.max(1,Math.ceil(s.view.length/PAGE));
+  if(s.page>pages) s.page=pages; if(s.page<1) s.page=1;
   const start=(s.page-1)*PAGE, slice=s.view.slice(start,start+PAGE);
   const openCt=s.rows.filter(r=>{const d=daysLeft(r.deadline);return d===null||d>=0;}).length;
   const soon=s.rows.filter(r=>{const d=daysLeft(r.deadline);return d!==null&&d>=0&&d<=7;}).length;
@@ -449,6 +456,8 @@ function indianaFilter(){
 }
 function renderIndiana(){
   const s=state.indiana;
+  const pages=Math.max(1,Math.ceil(s.view.length/PAGE));
+  if(s.page>pages) s.page=pages; if(s.page<1) s.page=1;
   const start=(s.page-1)*PAGE, slice=s.view.slice(start,start+PAGE);
   const soon=s.rows.filter(r=>{const d=daysLeft(r.response_due_by);return d!==null&&d>=0&&d<=7;}).length;
   const favCt=s.rows.filter(r=>r.is_favorited).length;
@@ -483,16 +492,31 @@ function stat(n,l,cls=""){return '<div class="stat '+cls+'"><div class="n">'+n+'
 function th(tab,key,label){const s=state[tab];const arrow=s.sortKey===key?(s.sortDir>0?" ↑":" ↓"):"";
   return '<th data-sort="'+key+'" data-tab="'+tab+'">'+label+arrow+'</th>';}
 function footer(tab){const s=state[tab];const pages=Math.max(1,Math.ceil(s.view.length/PAGE));
+  const atStart=s.page<=1, atEnd=s.page>=pages;
   return '<div class="mono" style="color:var(--muted)">Showing '+
     Math.min((s.page-1)*PAGE+1,s.view.length)+'–'+Math.min(s.page*PAGE,s.view.length)+' of '+s.view.length+'</div>'+
-    '<div class="pager"><button '+(s.page<=1?"disabled":"")+' data-pg="prev" data-tab="'+tab+'">‹ Prev</button>'+
-    '<span>'+s.page+' / '+pages+'</span>'+
-    '<button '+(s.page>=pages?"disabled":"")+' data-pg="next" data-tab="'+tab+'">Next ›</button></div>';}
+    '<div class="pager">'+
+    '<button '+(atStart?"disabled":"")+' data-pg="first" data-tab="'+tab+'" title="First page">« First</button>'+
+    '<button '+(atStart?"disabled":"")+' data-pg="prev" data-tab="'+tab+'">‹ Prev</button>'+
+    '<span>Page <input class="pg-input" type="number" min="1" max="'+pages+'" value="'+s.page+'" data-tab="'+tab+'" aria-label="Page number"> / '+pages+'</span>'+
+    '<button '+(atEnd?"disabled":"")+' data-pg="next" data-tab="'+tab+'">Next ›</button>'+
+    '<button '+(atEnd?"disabled":"")+' data-pg="last" data-tab="'+tab+'" title="Last page">Last »</button>'+
+    '</div>';}
 function sortRows(tab){const s=state[tab];const k=s.sortKey;
   s.view.sort((a,b)=>{let x=a[k],y=b[k];
     if(k==="deadline"||k==="response_due_by"||k==="posted"){x=new Date(x||"2999");y=new Date(y||"2999");}
     else{x=String(x||"").toLowerCase();y=String(y||"").toLowerCase();}
     return x<y?-1*s.sortDir:x>y?1*s.sortDir:0;});}
+
+// jump to a typed page number (clamped to valid range)
+function jumpToPage(inp){
+  const tab=inp.dataset.tab,s=state[tab];
+  const pages=Math.max(1,Math.ceil(s.view.length/PAGE));
+  let n=parseInt(inp.value,10);
+  if(isNaN(n)) n=s.page;
+  s.page=Math.min(pages,Math.max(1,n));
+  tab==="federal"?renderFederal():renderIndiana();
+}
 
 document.addEventListener("click",e=>{
   const t=e.target.closest("[data-sort]");
@@ -501,7 +525,22 @@ document.addEventListener("click",e=>{
     sortRows(tab); tab==="federal"?renderFederal():renderIndiana(); return;}
   const p=e.target.closest("[data-pg]");
   if(p){const tab=p.dataset.tab,s=state[tab];
-    s.page+=p.dataset.pg==="next"?1:-1; tab==="federal"?renderFederal():renderIndiana();}
+    const pages=Math.max(1,Math.ceil(s.view.length/PAGE));
+    const act=p.dataset.pg;
+    if(act==="first")s.page=1;
+    else if(act==="last")s.page=pages;
+    else if(act==="next")s.page=Math.min(pages,s.page+1);
+    else if(act==="prev")s.page=Math.max(1,s.page-1);
+    tab==="federal"?renderFederal():renderIndiana();}
+});
+// page-number input: jump on Enter, and on blur/change
+document.addEventListener("keydown",e=>{
+  const inp=e.target.closest(".pg-input");
+  if(inp && e.key==="Enter"){ e.preventDefault(); jumpToPage(inp); inp.blur(); }
+});
+document.addEventListener("change",e=>{
+  const inp=e.target.closest(".pg-input");
+  if(inp){ jumpToPage(inp); }
 });
 
 // ---------- favorites ----------
