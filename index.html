@@ -316,21 +316,21 @@ function renderFederal(){
     stat(favs.size,"Favorites");
   if(!slice.length){document.getElementById("tbl-federal").innerHTML='<div class="msg">No matches.</div>';
     document.getElementById("foot-federal").innerHTML="";return;}
-  let h='<table><colgroup><col class="c-title"><col class="c-agency"><col class="c-type"><col class="c-set"><col class="c-naics"><col class="c-state"><col class="c-posted"><col class="c-deadline"><col class="c-star"></colgroup><thead><tr>'+
+  let h='<table><colgroup><col class="c-posted"><col class="c-title"><col class="c-agency"><col class="c-type"><col class="c-set"><col class="c-naics"><col class="c-state"><col class="c-deadline"><col class="c-star"></colgroup><thead><tr>'+
+    th("federal","posted","Posted")+
     th("federal","title","Title")+th("federal","agency","Agency")+
     th("federal","notice_type","Type")+th("federal","set_aside","Set-Aside")+
     th("federal","naics","NAICS")+th("federal","state","State")+
-    th("federal","posted","Posted")+
     th("federal","deadline","Deadline")+'<th class="col-star">★</th></tr></thead><tbody>';
   slice.forEach(r=>{
     const dl=daysLeft(r.deadline), soonC=dl!==null&&dl>=0&&dl<=7?"dl-soon":"";
-    h+='<tr><td class="t-title"><a href="'+esc(r.sam_link||"#")+'" target="_blank">'+esc(r.title)+'</a></td>'+
+    h+='<tr><td class="deadline">'+fmtDate(r.posted)+'</td>'+
+      '<td class="t-title"><a href="'+esc(r.sam_link||"#")+'" target="_blank">'+esc(r.title)+'</a></td>'+
       '<td>'+esc(r.agency)+'</td>'+
       '<td>'+(r.notice_type?'<span class="pill">'+esc(r.notice_type)+'</span>':'—')+'</td>'+
       '<td>'+(r.set_aside?'<span class="pill sa">'+esc(r.set_aside)+'</span>':'—')+'</td>'+
       '<td class="mono">'+esc(r.naics||"—")+'</td>'+
       '<td class="mono">'+esc(r.state||"—")+'</td>'+
-      '<td class="deadline">'+fmtDate(r.posted)+'</td>'+
       '<td class="deadline '+soonC+'">'+fmtDate(r.deadline)+(dl!==null&&dl>=0?' <span style="color:var(--muted)">('+dl+'d)</span>':'')+'</td>'+
       '<td class="col-star">'+rowActions("federal",r.notice_id,
         '<button class="fav '+(favs.has(r.notice_id)?"on":"")+'" data-id="'+esc(r.notice_id)+'" data-tab="federal">★</button>')+
