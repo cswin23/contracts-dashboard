@@ -706,16 +706,26 @@ document.getElementById("refreshBtn").addEventListener("click",async function(){
 const descCache = {};                 // notice_id -> plain text (or null)
 let descCurrentText = "";
 
-// turn SAM's stored HTML into clean, copy-friendly plain text
-function htmlToText(html){
-  if(!html) return "";
-  let t = html
-    .replace(/<\s*br\s*\/?>/gi,"\n")
-    .replace(/<\/\s*(p|div|li|tr|h[1-6])\s*>/gi,"\n")
-    .replace(/<\s*li[^>]*>/gi,"• ")
-    .replace(/<[^>]+>/g,"");
-  const ta=document.createElement("textarea"); ta.innerHTML=t; t=ta.value;  // decode entities
-  return t.replace(/\n{3,}/g,"\n\n").replace(/[ \t]+\n/g,"\n").trim();
+// turn SAM's stored description (JSON-wrapped, escaped, or HTML) into clean,
+// copy-friendly plain text
+function htmlToText(raw){
+  if(!raw) return "";
+  let t = raw;
+  // 1. SAM returns {"description":"..."} — unwrap it (JSON.parse decodes \n, \t too)
+  try{ const o=JSON.parse(raw); if(o && typeof o.description==="string") t=o.description; }catch(e){}
+  // 2. safety net: if escapes survived as literal backslash sequences, decode them
+  if(/\\n|\\t|\\r/.test(t)){
+    t=t.replace(/\\r\\n|\\r|\\n/g,"\n").replace(/\\t/g,"\t").replace(/\\"/g,'"').replace(/\\\\/g,"\\");
+  }
+  // 3. strip any HTML tags that may be embedded
+  t=t.replace(/<\s*br\s*\/?>/gi,"\n")
+     .replace(/<\/\s*(p|div|li|tr|h[1-6])\s*>/gi,"\n")
+     .replace(/<\s*li[^>]*>/gi,"• ")
+     .replace(/<[^>]+>/g,"");
+  // 4. decode HTML entities
+  const ta=document.createElement("textarea"); ta.innerHTML=t; t=ta.value;
+  // 5. tidy whitespace (collapse tabs/runs of spaces, trim blank lines)
+  return t.replace(/[ \t]+/g," ").replace(/ *\n */g,"\n").replace(/\n{3,}/g,"\n\n").trim();
 }
 
 function openDrawer(){ document.getElementById("descOverlay").classList.add("open");
