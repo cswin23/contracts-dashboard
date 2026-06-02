@@ -139,6 +139,11 @@
 
   @media(max-width:720px){.t-desc{display:none}.brand h1{font-size:24px}}
   /* Description expander button in title cell */
+  /* Fresh-listing indicators */
+  .new-badge{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:500;
+    letter-spacing:.5px;margin-top:5px;padding:2px 7px;border-radius:8px;background:var(--accent);color:#fff}
+  tr.row-new td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+
   /* Description trigger pill under the title */
   .desc-pill{display:inline-flex;align-items:center;gap:5px;margin-top:7px;cursor:pointer;
     font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.5px;text-transform:uppercase;
@@ -268,6 +273,10 @@ function fmtDate(d){ if(!d) return "—"; const x=new Date(d); if(isNaN(x)) retu
   return x.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}); }
 function daysLeft(d){ if(!d) return null; const x=new Date(d); if(isNaN(x)) return null;
   return Math.ceil((x-today)/864e5); }
+// "new" = posted within the last NEW_DAYS days. One-line tweak to change the window.
+const NEW_DAYS = 2;
+function isNew(d){ if(!d) return false; const x=new Date(d); if(isNaN(x)) return false;
+  const age=(today-x)/864e5; return age>=0 && age<=NEW_DAYS; }
 
 // ---------- TABS ----------
 document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{
@@ -357,7 +366,9 @@ function renderFederal(){
     th("federal","deadline","Deadline")+'<th class="col-star">★</th></tr></thead><tbody>';
   slice.forEach(r=>{
     const dl=daysLeft(r.deadline), soonC=dl!==null&&dl>=0&&dl<=7?"dl-soon":"";
-    h+='<tr><td class="deadline">'+fmtDate(r.posted)+'</td>'+
+    const fresh=isNew(r.posted);
+    h+='<tr'+(fresh?' class="row-new"':'')+'><td class="deadline">'+fmtDate(r.posted)+
+      (fresh?'<div><span class="new-badge">● NEW</span></div>':'')+'</td>'+
       '<td class="t-title"><a href="'+esc(r.sam_link||"#")+'" target="_blank">'+esc(r.title)+'</a><div><span class="desc-pill" data-desc="'+esc(r.notice_id)+'">▤ Description</span></div></td>'+
       '<td>'+esc(r.agency)+'</td>'+
       '<td>'+(r.notice_type?'<span class="pill">'+esc(r.notice_type)+'</span>':'—')+'</td>'+
