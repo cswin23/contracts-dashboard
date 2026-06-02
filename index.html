@@ -65,7 +65,8 @@
   #tbl-federal,#tbl-indiana{overflow-x:auto}
   table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed;min-width:1160px}
   col.c-title{width:19%} col.c-agency{width:16%} col.c-type{width:10%} col.c-set{width:14%}
-  col.c-naics{width:7%} col.c-state{width:5%} col.c-posted{width:11%} col.c-deadline{width:13%}
+  col.c-naics{width:7%} col.c-state{width:5%} col.c-posted{width:10%} col.c-deadline{width:12%}
+  col.c-psc{width:13%}
   col.c-contact{width:20%} col.c-docs{width:8%} col.c-star{width:104px}
   thead th{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;
     color:var(--muted);text-align:left;padding:8px 10px;border-bottom:1.5px solid var(--ink);cursor:pointer;white-space:nowrap}
@@ -83,6 +84,7 @@
     border-radius:8px;background:#ece4d2;color:var(--accent-d);white-space:normal;max-width:100%;
     overflow-wrap:anywhere;line-height:1.4}
   .pill.sa{background:#efe3cb;color:var(--gold)}
+  .pill.psc{background:#dde7ef;color:#2a4a63}
   .deadline{font-family:'IBM Plex Mono',monospace;white-space:nowrap}
   .dl-soon{color:var(--red);font-weight:600}
   .fav{cursor:pointer;font-size:18px;line-height:1;background:none;border:none;color:var(--line);transition:.15s}
@@ -278,6 +280,30 @@ const NEW_DAYS = 2;
 function isNew(d){ if(!d) return false; const x=new Date(d); if(isNaN(x)) return false;
   const age=(today-x)/864e5; return age>=0 && age<=NEW_DAYS; }
 
+// ---------- PSC code -> title lookup (loaded once from `psc_codes` table) ----------
+const pscTitles = {};
+async function loadPscTitles(){
+  try{
+    let from=0;
+    while(true){
+      const {data,error}=await sb.from("psc_codes").select("code,title").range(from,from+999);
+      if(error) throw error;
+      if(!data || !data.length) break;
+      data.forEach(r=>{ if(r.code) pscTitles[String(r.code).trim().toUpperCase()]=r.title; });
+      if(data.length<1000) break;
+      from+=1000;
+    }
+  }catch(e){ console.warn("PSC titles not loaded (psc_codes table missing or empty):",e.message); }
+}
+// Render a PSC pill: "CODE - TITLE" when the title is known, else just the code.
+function pscPill(code){
+  if(!code) return "—";
+  const c=String(code).trim().toUpperCase();
+  const t=pscTitles[c];
+  const label = t ? (c+" - "+t) : c;
+  return '<span class="pill psc" title="'+esc(label)+'">'+esc(label)+'</span>';
+}
+
 // ---------- TABS ----------
 document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{
   document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
@@ -358,9 +384,10 @@ function renderFederal(){
     stat(favs.size,"Favorites");
   if(!slice.length){document.getElementById("tbl-federal").innerHTML='<div class="msg">No matches.</div>';
     document.getElementById("foot-federal").innerHTML="";return;}
-  let h='<table><colgroup><col class="c-posted"><col class="c-title"><col class="c-agency"><col class="c-type"><col class="c-set"><col class="c-naics"><col class="c-state"><col class="c-deadline"><col class="c-star"></colgroup><thead><tr>'+
+  let h='<table><colgroup><col class="c-posted"><col class="c-title"><col class="c-agency"><col class="c-psc"><col class="c-type"><col class="c-set"><col class="c-naics"><col class="c-state"><col class="c-deadline"><col class="c-star"></colgroup><thead><tr>'+
     th("federal","posted","Posted")+
     th("federal","title","Title")+th("federal","agency","Agency")+
+    th("federal","psc","PSC")+
     th("federal","notice_type","Type")+th("federal","set_aside","Set-Aside")+
     th("federal","naics","NAICS")+th("federal","state","State")+
     th("federal","deadline","Deadline")+'<th class="col-star">★</th></tr></thead><tbody>';
@@ -371,6 +398,7 @@ function renderFederal(){
       (fresh?'<div><span class="new-badge">● NEW</span></div>':'')+'</td>'+
       '<td class="t-title"><a href="'+esc(r.sam_link||"#")+'" target="_blank">'+esc(r.title)+'</a><div><span class="desc-pill" data-desc="'+esc(r.notice_id)+'">▤ Description</span></div></td>'+
       '<td>'+esc(r.agency)+'</td>'+
+      '<td>'+pscPill(r.psc)+'</td>'+
       '<td>'+(r.notice_type?'<span class="pill">'+esc(r.notice_type)+'</span>':'—')+'</td>'+
       '<td>'+(r.set_aside?'<span class="pill sa">'+esc(r.set_aside)+'</span>':'—')+'</td>'+
       '<td class="mono">'+esc(r.naics||"—")+'</td>'+
@@ -692,7 +720,7 @@ document.getElementById("refreshBtn").addEventListener("click",async function(){
 
 // ---------- init ----------
 (async function(){
-  await Promise.all([loadDismissed(), loadSubmissions()]);
+  await Promise.all([loadDismissed(), loadSubmissions(), loadPscTitles()]);
   await loadFederal();
   sortRows("federal"); federalFilter();
   await loadIndiana();
