@@ -62,6 +62,30 @@
   .controls .ghost.on{background:var(--gold);color:#fff;border-color:var(--gold)}
   .controls .spacer{flex:1}
 
+  /* Multi-select filter dropdowns */
+  .ms{position:relative;flex:0 0 auto;width:160px;font-family:'IBM Plex Sans',sans-serif}
+  .ms-btn{width:100%;font-size:13px;padding:8px 11px;border:1.5px solid var(--line);border-radius:3px;
+    background:var(--paper);color:var(--ink);cursor:pointer;text-align:left;display:flex;
+    align-items:center;justify-content:space-between;gap:6px}
+  .ms-btn:focus{outline:none;border-color:var(--accent)}
+  .ms.open .ms-btn{border-color:var(--accent)}
+  .ms-txt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ms-caret{flex:0 0 auto;color:var(--muted);font-size:10px}
+  .ms-menu{display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:40;
+    min-width:100%;width:max-content;max-width:320px;max-height:300px;overflow:auto;
+    background:var(--card);border:1.5px solid var(--ink);border-radius:4px;
+    box-shadow:0 8px 24px -14px rgba(19,33,27,.5);padding:6px}
+  .ms.open .ms-menu{display:block}
+  .ms-menu label{display:flex;align-items:flex-start;gap:8px;padding:6px 8px;font-size:12.5px;
+    cursor:pointer;border-radius:3px;line-height:1.35}
+  .ms-menu label:hover{background:#faf7ee}
+  .ms-menu input{margin-top:2px;flex:0 0 auto;accent-color:var(--accent)}
+  .ms-clear{display:block;width:100%;text-align:left;font-family:'IBM Plex Mono',monospace;
+    font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);
+    background:none;border:none;border-bottom:1px solid var(--line);padding:4px 8px 8px;
+    margin-bottom:4px;cursor:pointer}
+  .ms-clear:hover{color:var(--red)}
+
   #tbl-federal,#tbl-indiana{overflow-x:auto}
   table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed;min-width:1160px}
   col.c-title{width:19%} col.c-agency{width:16%} col.c-type{width:10%} col.c-set{width:14%}
@@ -207,10 +231,10 @@
       <div class="stats" id="stats-federal"></div>
       <div class="controls">
         <input type="text" id="q-federal" placeholder="Search title, agency, NAICS…">
-        <select id="f-type"><option value="">All notice types</option></select>
-        <select id="f-setaside"><option value="">All set-asides</option></select>
-        <select id="f-sector"><option value="">All sectors</option></select>
-        <select id="f-state"><option value="">All states</option></select>
+        <div class="ms" id="f-type" data-key="notice_type" data-all="All notice types"><button type="button" class="ms-btn"><span class="ms-txt">All notice types</span><span class="ms-caret">▾</span></button><div class="ms-menu"></div></div>
+        <div class="ms" id="f-setaside" data-key="set_aside" data-all="All set-asides"><button type="button" class="ms-btn"><span class="ms-txt">All set-asides</span><span class="ms-caret">▾</span></button><div class="ms-menu"></div></div>
+        <div class="ms" id="f-sector" data-key="sector" data-all="All sectors"><button type="button" class="ms-btn"><span class="ms-txt">All sectors</span><span class="ms-caret">▾</span></button><div class="ms-menu"></div></div>
+        <div class="ms" id="f-state" data-key="state" data-all="All states"><button type="button" class="ms-btn"><span class="ms-txt">All states</span><span class="ms-caret">▾</span></button><div class="ms-menu"></div></div>
         <button class="ghost" id="fav-federal">★ Favorites</button>
         <button class="ghost" id="exp-federal" title="Also show past-due opportunities">⏷ Expired</button>
         <button class="ghost" id="dis-federal" title="Also show items marked not a fit">⤺ Dismissed</button>
@@ -349,24 +373,33 @@ async function loadFederal(){
   buildFederalFilters(all);
   renderFederal();
 }
+// Selected values per federal filter (empty set = "all").
+const fedFilters = { notice_type:new Set(), set_aside:new Set(), sector:new Set(), state:new Set() };
+function updateMsLabel(ms){
+  const sel=fedFilters[ms.dataset.key], txt=ms.querySelector(".ms-txt");
+  if(sel.size===0) txt.textContent=ms.dataset.all;
+  else if(sel.size===1) txt.textContent=[...sel][0];
+  else txt.textContent=sel.size+" selected";
+}
 function buildFederalFilters(rows){
-  const fill=(id,key)=>{ const sel=document.getElementById(id);
+  document.querySelectorAll("#federal .ms").forEach(ms=>{
+    const key=ms.dataset.key, sel=fedFilters[key];
     const vals=[...new Set(rows.map(r=>r[key]).filter(Boolean))].sort();
-    sel.length=1; vals.forEach(v=>{const o=document.createElement("option");o.value=v;
-      o.textContent=v.length>42?v.slice(0,40)+"…":v; sel.appendChild(o);}); };
-  fill("f-type","notice_type"); fill("f-setaside","set_aside");
-  fill("f-sector","sector"); fill("f-state","state");
+    ms.querySelector(".ms-menu").innerHTML=
+      '<button type="button" class="ms-clear">Clear</button>'+
+      vals.map(v=>'<label><input type="checkbox" value="'+esc(v)+'"'+(sel.has(v)?' checked':'')+
+        '><span>'+esc(v)+'</span></label>').join("");
+    updateMsLabel(ms);
+  });
 }
 function federalFilter(){
   const q=document.getElementById("q-federal").value.toLowerCase();
-  const ty=document.getElementById("f-type").value, sa=document.getElementById("f-setaside").value,
-        se=document.getElementById("f-sector").value, st=document.getElementById("f-state").value;
   const favs=getFavs("federal");
   state.federal.view=state.federal.rows.filter(r=>{
-    if(ty&&r.notice_type!==ty) return false;
-    if(sa&&r.set_aside!==sa) return false;
-    if(se&&r.sector!==se) return false;
-    if(st&&r.state!==st) return false;
+    if(fedFilters.notice_type.size && !fedFilters.notice_type.has(r.notice_type)) return false;
+    if(fedFilters.set_aside.size && !fedFilters.set_aside.has(r.set_aside)) return false;
+    if(fedFilters.sector.size && !fedFilters.sector.has(r.sector)) return false;
+    if(fedFilters.state.size && !fedFilters.state.has(r.state)) return false;
     if(state.federal.favOnly&&!favs.has(r.notice_id)) return false;
     // hide dismissed unless "Dismissed" toggle is on
     if(!hidden.federal.showDismissed && hidden.federal.dismissed.has(r.notice_id)) return false;
@@ -745,10 +778,36 @@ document.getElementById("csv-federal").addEventListener("click",()=>exportCSV("f
 document.getElementById("csv-indiana").addEventListener("click",()=>exportCSV("indiana"));
 
 // ---------- search / filter wiring ----------
-["q-federal","f-type","f-setaside","f-sector","f-state"].forEach(id=>
-  document.getElementById(id).addEventListener("input",federalFilter));
+document.getElementById("q-federal").addEventListener("input",federalFilter);
 ["q-indiana","i-agency"].forEach(id=>
   document.getElementById(id).addEventListener("input",indianaFilter));
+
+// multi-select dropdowns (federal filters): open/close, checkbox toggle, clear
+document.querySelectorAll("#federal .ms").forEach(ms=>{
+  ms.querySelector(".ms-btn").addEventListener("click",e=>{
+    e.stopPropagation();
+    const wasOpen=ms.classList.contains("open");
+    document.querySelectorAll("#federal .ms.open").forEach(o=>o.classList.remove("open"));
+    ms.classList.toggle("open",!wasOpen);
+  });
+  ms.addEventListener("change",e=>{
+    const cb=e.target.closest('input[type="checkbox"]'); if(!cb) return;
+    const sel=fedFilters[ms.dataset.key];
+    cb.checked ? sel.add(cb.value) : sel.delete(cb.value);
+    updateMsLabel(ms); federalFilter();
+  });
+  ms.addEventListener("click",e=>{
+    if(!e.target.closest(".ms-clear")) return;
+    fedFilters[ms.dataset.key].clear();
+    ms.querySelectorAll('input[type="checkbox"]').forEach(c=>c.checked=false);
+    updateMsLabel(ms); federalFilter();
+  });
+});
+// click outside any open menu closes it
+document.addEventListener("click",e=>{
+  if(!e.target.closest("#federal .ms"))
+    document.querySelectorAll("#federal .ms.open").forEach(o=>o.classList.remove("open"));
+});
 
 // ---------- refresh ----------
 document.getElementById("refreshBtn").addEventListener("click",async function(){
